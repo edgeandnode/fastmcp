@@ -1,6 +1,6 @@
 {
   "name": "fastmcp",
-  "version": "1.0.0",
+  "version": "1.0.0-edgeandnode.1",
   "main": "dist/FastMCP.js",
   "scripts": {
     "build": "tsup",
@@ -22,7 +22,7 @@
   "module": "dist/FastMCP.js",
   "types": "dist/FastMCP.d.ts",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.17.2",
+    "@modelcontextprotocol/sdk": "github:edgeandnode/mcp-typescript-sdk#2de06543904483073d8cc13db1d0e08e16601081",
     "@standard-schema/spec": "^1.0.0",
     "execa": "^9.6.0",
     "file-type": "^21.0.0",
