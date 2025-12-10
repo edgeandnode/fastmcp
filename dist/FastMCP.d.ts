@@ -2,7 +2,7 @@ import { Server } from '@modelcontextprotocol/sdk/server/index.js';
 import { EventStore } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { RequestOptions } from '@modelcontextprotocol/sdk/shared/protocol.js';
 import { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
-import { ResourceLink, RequestMeta, Root, ClientCapabilities, GetPromptResult, CreateMessageRequestSchema } from '@modelcontextprotocol/sdk/types.js';
+import { ResourceLink, RequestMeta, Root, ClientCapabilities, GetPromptResult, CreateMessageRequestSchema, McpError } from '@modelcontextprotocol/sdk/types.js';
 export { ErrorCode, McpError, RequestMeta, ResourceLink } from '@modelcontextprotocol/sdk/types.js';
 import { StandardSchemaV1 } from '@standard-schema/spec';
 import { EventEmitter } from 'events';
@@ -102,6 +102,22 @@ type ToolParameters = StandardSchemaV1;
 declare abstract class FastMCPError extends Error {
     constructor(message?: string);
 }
+/**
+ * Custom MCP error with a marker property to enable robust error detection
+ * across module boundaries.
+ *
+ * This class extends McpError and adds a `__isMcpError` marker property.
+ * This allows error detection to work even when instanceof fails due to
+ * module instances being loaded multiple times (e.g., with tsx, different
+ * bundlers, or ESM/CommonJS mixing).
+ *
+ * Use this instead of McpError when you need the error to be re-thrown
+ * by FastMCP's error handling rather than wrapped in a result.
+ */
+declare class CustomMcpError extends McpError {
+    readonly __isMcpError = true;
+    constructor(code: number, message: string, data?: unknown);
+}
 declare class UnexpectedStateError extends FastMCPError {
     extras?: Extras;
     constructor(message: string, extras?: Extras);
@@ -111,6 +127,14 @@ declare class UnexpectedStateError extends FastMCPError {
  */
 declare class UserError extends UnexpectedStateError {
 }
+/**
+ * Type guard to check if an error should be re-thrown as an MCP error.
+ * Works across module boundaries by checking both instanceof and marker property.
+ *
+ * @param error - The error to check
+ * @returns true if error is an McpError or has the __isMcpError marker
+ */
+declare function isMcpErrorLike(error: unknown): error is McpError;
 type ImageContent = {
     data: string;
     mimeType: string;
@@ -650,4 +674,4 @@ declare class FastMCP<T extends FastMCPSessionAuth = FastMCPSessionAuth> extends
     stop(): Promise<void>;
 }
 
-export { type AudioContent, type Content, type ContentResult, type Context, FastMCP, type FastMCPEvents, FastMCPSession, type FastMCPSessionEvents, type ImageContent, type InputPrompt, type InputPromptArgument, type Logger, type LoggingLevel, type Progress, type Prompt, type PromptArgument, type Resource, type ResourceContent, type ResourceResult, type ResourceTemplate, type ResourceTemplateArgument, type SSEServer, type SerializableValue, type ServerOptions, type TextContent, type Tool, type ToolParameters, UnexpectedStateError, UserError, audioContent, imageContent };
+export { type AudioContent, type Content, type ContentResult, type Context, CustomMcpError, FastMCP, type FastMCPEvents, FastMCPSession, type FastMCPSessionEvents, type ImageContent, type InputPrompt, type InputPromptArgument, type Logger, type LoggingLevel, type Progress, type Prompt, type PromptArgument, type Resource, type ResourceContent, type ResourceResult, type ResourceTemplate, type ResourceTemplateArgument, type SSEServer, type SerializableValue, type ServerOptions, type TextContent, type Tool, type ToolParameters, UnexpectedStateError, UserError, audioContent, imageContent, isMcpErrorLike };

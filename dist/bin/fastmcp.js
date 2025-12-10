@@ -30,9 +30,7 @@ await yargs(hideBin(process.argv)).scriptName("fastmcp").command(
       if (argv.verbose) {
         console.log(`[FastMCP] Starting server: ${command}`);
         console.log(`[FastMCP] File: ${argv.file}`);
-        console.log(
-          `[FastMCP] Watch mode: ${argv.watch ? "enabled" : "disabled"}`
-        );
+        console.log(`[FastMCP] Watch mode: ${argv.watch ? "enabled" : "disabled"}`);
       }
       await execa({
         shell: true,
@@ -137,14 +135,9 @@ await yargs(hideBin(process.argv)).scriptName("fastmcp").command(
         console.error("Make sure the file properly imports and uses FastMCP");
         process.exit(1);
       }
-      console.log(
-        "[FastMCP] \u2713 All validations passed! Server file looks good."
-      );
+      console.log("[FastMCP] \u2713 All validations passed! Server file looks good.");
     } catch (error) {
-      console.error(
-        "[FastMCP Error] Validation failed:",
-        error instanceof Error ? error.message : String(error)
-      );
+      console.error("[FastMCP Error] Validation failed:", error instanceof Error ? error.message : String(error));
       process.exit(1);
     }
   }

@@ -32,9 +32,7 @@ var imageContent = async (input) => {
       try {
         const response = await fetch(input.url);
         if (!response.ok) {
-          throw new Error(
-            `Server responded with status: ${response.status} - ${response.statusText}`
-          );
+          throw new Error(`Server responded with status: ${response.status} - ${response.statusText}`);
         }
         rawData = Buffer.from(await response.arrayBuffer());
       } catch (error) {
@@ -53,16 +51,12 @@ var imageContent = async (input) => {
     } else if ("buffer" in input) {
       rawData = input.buffer;
     } else {
-      throw new Error(
-        "Invalid input: Provide a valid 'url', 'path', or 'buffer'"
-      );
+      throw new Error("Invalid input: Provide a valid 'url', 'path', or 'buffer'");
     }
     const { fileTypeFromBuffer } = await import("file-type");
     const mimeType = await fileTypeFromBuffer(rawData);
     if (!mimeType || !mimeType.mime.startsWith("image/")) {
-      console.warn(
-        `Warning: Content may not be a valid image. Detected MIME: ${mimeType?.mime || "unknown"}`
-      );
+      console.warn(`Warning: Content may not be a valid image. Detected MIME: ${mimeType?.mime || "unknown"}`);
     }
     const base64Data = rawData.toString("base64");
     return {
@@ -85,9 +79,7 @@ var audioContent = async (input) => {
       try {
         const response = await fetch(input.url);
         if (!response.ok) {
-          throw new Error(
-            `Server responded with status: ${response.status} - ${response.statusText}`
-          );
+          throw new Error(`Server responded with status: ${response.status} - ${response.statusText}`);
         }
         rawData = Buffer.from(await response.arrayBuffer());
       } catch (error) {
@@ -106,16 +98,12 @@ var audioContent = async (input) => {
     } else if ("buffer" in input) {
       rawData = input.buffer;
     } else {
-      throw new Error(
-        "Invalid input: Provide a valid 'url', 'path', or 'buffer'"
-      );
+      throw new Error("Invalid input: Provide a valid 'url', 'path', or 'buffer'");
     }
     const { fileTypeFromBuffer } = await import("file-type");
     const mimeType = await fileTypeFromBuffer(rawData);
     if (!mimeType || !mimeType.mime.startsWith("audio/")) {
-      console.warn(
-        `Warning: Content may not be a valid audio file. Detected MIME: ${mimeType?.mime || "unknown"}`
-      );
+      console.warn(`Warning: Content may not be a valid audio file. Detected MIME: ${mimeType?.mime || "unknown"}`);
     }
     const base64Data = rawData.toString("base64");
     return {
@@ -137,6 +125,12 @@ var FastMCPError = class extends Error {
     this.name = new.target.name;
   }
 };
+var CustomMcpError = class extends McpError {
+  __isMcpError = true;
+  constructor(code, message, data) {
+    super(code, message, data);
+  }
+};
 var UnexpectedStateError = class extends FastMCPError {
   extras;
   constructor(message, extras) {
@@ -147,6 +141,9 @@ var UnexpectedStateError = class extends FastMCPError {
 };
 var UserError = class extends UnexpectedStateError {
 };
+function isMcpErrorLike(error) {
+  return error instanceof McpError || typeof error === "object" && error !== null && "__isMcpError" in error && error.__isMcpError === true;
+}
 var TextContentZodSchema = z.object({
   /**
    * The text content of the message.
@@ -372,9 +369,7 @@ var FastMCPSession = class extends FastMCPSessionEventEmitter {
           this.#roots = roots?.roots || [];
         } catch (e) {
           if (e instanceof McpError && e.code === ErrorCode.MethodNotFound) {
-            this.#logger.debug(
-              "[FastMCP debug] listRoots method not supported by client"
-            );
+            this.#logger.debug("[FastMCP debug] listRoots method not supported by client");
           } else {
             this.#logger.error(
               `[FastMCP error] received error listing roots.
@@ -395,13 +390,9 @@ ${e instanceof Error ? e.stack : JSON.stringify(e)}`
               if (logLevel === "debug") {
                 this.#logger.debug("[FastMCP debug] server ping failed");
               } else if (logLevel === "warning") {
-                this.#logger.warn(
-                  "[FastMCP warning] server is not responding to ping"
-                );
+                this.#logger.warn("[FastMCP warning] server is not responding to ping");
               } else if (logLevel === "error") {
-                this.#logger.error(
-                  "[FastMCP error] server is not responding to ping"
-                );
+                this.#logger.error("[FastMCP error] server is not responding to ping");
               } else {
                 this.#logger.info("[FastMCP info] server ping failed");
               }
@@ -428,17 +419,11 @@ ${e instanceof Error ? e.stack : JSON.stringify(e)}`
       return Promise.resolve();
     }
     if (this.#connectionState === "error" || this.#connectionState === "closed") {
-      return Promise.reject(
-        new Error(`Connection is in ${this.#connectionState} state`)
-      );
+      return Promise.reject(new Error(`Connection is in ${this.#connectionState} state`));
     }
     return new Promise((resolve, reject) => {
       const timeout = setTimeout(() => {
-        reject(
-          new Error(
-            "Connection timeout: Session failed to become ready within 5 seconds"
-          )
-        );
+        reject(new Error("Connection timeout: Session failed to become ready within 5 seconds"));
       }, 5e3);
       this.once("ready", () => {
         clearTimeout(timeout);
@@ -527,9 +512,7 @@ ${e instanceof Error ? e.stack : JSON.stringify(e)}`
   setupCompleteHandlers() {
     this.#server.setRequestHandler(CompleteRequestSchema, async (request) => {
       if (request.params.ref.type === "ref/prompt") {
-        const prompt = this.#prompts.find(
-          (prompt2) => prompt2.name === request.params.ref.name
-        );
+        const prompt = this.#prompts.find((prompt2) => prompt2.name === request.params.ref.name);
         if (!prompt) {
           throw new UnexpectedStateError("Unknown prompt", {
             request
@@ -541,20 +524,14 @@ ${e instanceof Error ? e.stack : JSON.stringify(e)}`
           });
         }
         const completion = CompletionZodSchema.parse(
-          await prompt.complete(
-            request.params.argument.name,
-            request.params.argument.value,
-            this.#auth
-          )
+          await prompt.complete(request.params.argument.name, request.params.argument.value, this.#auth)
         );
         return {
           completion
         };
       }
       if (request.params.ref.type === "ref/resource") {
-        const resource = this.#resourceTemplates.find(
-          (resource2) => resource2.uriTemplate === request.params.ref.uri
-        );
+        const resource = this.#resourceTemplates.find((resource2) => resource2.uriTemplate === request.params.ref.uri);
         if (!resource) {
           throw new UnexpectedStateError("Unknown resource", {
             request
@@ -564,19 +541,12 @@ ${e instanceof Error ? e.stack : JSON.stringify(e)}`
           throw new UnexpectedStateError("Unexpected resource");
         }
         if (!resource.complete) {
-          throw new UnexpectedStateError(
-            "Resource does not support completion",
-            {
-              request
-            }
-          );
+          throw new UnexpectedStateError("Resource does not support completion", {
+            request
+          });
         }
         const completion = CompletionZodSchema.parse(
-          await resource.complete(
-            request.params.argument.name,
-            request.params.argument.value,
-            this.#auth
-          )
+          await resource.complete(request.params.argument.name, request.params.argument.value, this.#auth)
         );
         return {
           completion
@@ -612,14 +582,9 @@ ${e instanceof Error ? e.stack : JSON.stringify(e)}`
       };
     });
     this.#server.setRequestHandler(GetPromptRequestSchema, async (request) => {
-      const prompt = prompts.find(
-        (prompt2) => prompt2.name === request.params.name
-      );
+      const prompt = prompts.find((prompt2) => prompt2.name === request.params.name);
       if (!prompt) {
-        throw new McpError(
-          ErrorCode.MethodNotFound,
-          `Unknown prompt: ${request.params.name}`
-        );
+        throw new McpError(ErrorCode.MethodNotFound, `Unknown prompt: ${request.params.name}`);
       }
       const args = request.params.arguments;
       for (const arg of prompt.arguments ?? []) {
@@ -632,16 +597,10 @@ ${e instanceof Error ? e.stack : JSON.stringify(e)}`
       }
       let result;
       try {
-        result = await prompt.load(
-          args,
-          this.#auth
-        );
+        result = await prompt.load(args, this.#auth);
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : String(error);
-        throw new McpError(
-          ErrorCode.InternalError,
-          `Failed to load prompt '${request.params.name}': ${errorMessage}`
-        );
+        throw new McpError(ErrorCode.InternalError, `Failed to load prompt '${request.params.name}': ${errorMessage}`);
       }
       if (typeof result === "string") {
         return {
@@ -672,122 +631,103 @@ ${e instanceof Error ? e.stack : JSON.stringify(e)}`
         }))
       };
     });
-    this.#server.setRequestHandler(
-      ReadResourceRequestSchema,
-      async (request) => {
-        if ("uri" in request.params) {
-          const resource = resources.find(
-            (resource2) => "uri" in resource2 && resource2.uri === request.params.uri
-          );
-          if (!resource) {
-            for (const resourceTemplate of this.#resourceTemplates) {
-              const uriTemplate = parseURITemplate(
-                resourceTemplate.uriTemplate
-              );
-              const match = uriTemplate.fromUri(request.params.uri);
-              if (!match) {
-                continue;
-              }
-              const uri = uriTemplate.fill(match);
-              const result = await resourceTemplate.load(match, this.#auth);
-              const resources2 = Array.isArray(result) ? result : [result];
-              return {
-                contents: resources2.map((resource2) => ({
-                  ...resource2,
-                  description: resourceTemplate.description,
-                  mimeType: resource2.mimeType ?? resourceTemplate.mimeType,
-                  name: resourceTemplate.name,
-                  uri: resource2.uri ?? uri
-                }))
-              };
+    this.#server.setRequestHandler(ReadResourceRequestSchema, async (request) => {
+      if ("uri" in request.params) {
+        const resource = resources.find((resource2) => "uri" in resource2 && resource2.uri === request.params.uri);
+        if (!resource) {
+          for (const resourceTemplate of this.#resourceTemplates) {
+            const uriTemplate = parseURITemplate(resourceTemplate.uriTemplate);
+            const match = uriTemplate.fromUri(request.params.uri);
+            if (!match) {
+              continue;
             }
-            throw new McpError(
-              ErrorCode.MethodNotFound,
-              `Resource not found: '${request.params.uri}'. Available resources: ${resources.map((r) => r.uri).join(", ") || "none"}`
-            );
+            const uri = uriTemplate.fill(match);
+            const result = await resourceTemplate.load(match, this.#auth);
+            const resources2 = Array.isArray(result) ? result : [result];
+            return {
+              contents: resources2.map((resource2) => ({
+                ...resource2,
+                description: resourceTemplate.description,
+                mimeType: resource2.mimeType ?? resourceTemplate.mimeType,
+                name: resourceTemplate.name,
+                uri: resource2.uri ?? uri
+              }))
+            };
           }
-          if (!("uri" in resource)) {
-            throw new UnexpectedStateError("Resource does not support reading");
-          }
-          let maybeArrayResult;
-          try {
-            maybeArrayResult = await resource.load(this.#auth);
-          } catch (error) {
-            const errorMessage = error instanceof Error ? error.message : String(error);
-            throw new McpError(
-              ErrorCode.InternalError,
-              `Failed to load resource '${resource.name}' (${resource.uri}): ${errorMessage}`,
-              {
-                uri: resource.uri
-              }
-            );
-          }
-          const resourceResults = Array.isArray(maybeArrayResult) ? maybeArrayResult : [maybeArrayResult];
-          return {
-            contents: resourceResults.map((result) => ({
-              ...result,
-              mimeType: result.mimeType ?? resource.mimeType,
-              name: resource.name,
-              uri: result.uri ?? resource.uri
-            }))
-          };
+          throw new McpError(
+            ErrorCode.MethodNotFound,
+            `Resource not found: '${request.params.uri}'. Available resources: ${resources.map((r) => r.uri).join(", ") || "none"}`
+          );
         }
-        throw new UnexpectedStateError("Unknown resource request", {
-          request
-        });
-      }
-    );
-  }
-  setupResourceTemplateHandlers(resourceTemplates) {
-    this.#server.setRequestHandler(
-      ListResourceTemplatesRequestSchema,
-      async () => {
+        if (!("uri" in resource)) {
+          throw new UnexpectedStateError("Resource does not support reading");
+        }
+        let maybeArrayResult;
+        try {
+          maybeArrayResult = await resource.load(this.#auth);
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          throw new McpError(
+            ErrorCode.InternalError,
+            `Failed to load resource '${resource.name}' (${resource.uri}): ${errorMessage}`,
+            {
+              uri: resource.uri
+            }
+          );
+        }
+        const resourceResults = Array.isArray(maybeArrayResult) ? maybeArrayResult : [maybeArrayResult];
         return {
-          resourceTemplates: resourceTemplates.map((resourceTemplate) => ({
-            description: resourceTemplate.description,
-            mimeType: resourceTemplate.mimeType,
-            name: resourceTemplate.name,
-            uriTemplate: resourceTemplate.uriTemplate
+          contents: resourceResults.map((result) => ({
+            ...result,
+            mimeType: result.mimeType ?? resource.mimeType,
+            name: resource.name,
+            uri: result.uri ?? resource.uri
           }))
         };
       }
-    );
+      throw new UnexpectedStateError("Unknown resource request", {
+        request
+      });
+    });
+  }
+  setupResourceTemplateHandlers(resourceTemplates) {
+    this.#server.setRequestHandler(ListResourceTemplatesRequestSchema, async () => {
+      return {
+        resourceTemplates: resourceTemplates.map((resourceTemplate) => ({
+          description: resourceTemplate.description,
+          mimeType: resourceTemplate.mimeType,
+          name: resourceTemplate.name,
+          uriTemplate: resourceTemplate.uriTemplate
+        }))
+      };
+    });
   }
   setupRootsHandlers() {
     if (this.#rootsConfig?.enabled === false) {
-      this.#logger.debug(
-        "[FastMCP debug] roots capability explicitly disabled via config"
-      );
+      this.#logger.debug("[FastMCP debug] roots capability explicitly disabled via config");
       return;
     }
     if (typeof this.#server.listRoots === "function") {
-      this.#server.setNotificationHandler(
-        RootsListChangedNotificationSchema,
-        () => {
-          this.#server.listRoots().then((roots) => {
-            this.#roots = roots.roots;
-            this.emit("rootsChanged", {
-              roots: roots.roots
-            });
-          }).catch((error) => {
-            if (error instanceof McpError && error.code === ErrorCode.MethodNotFound) {
-              this.#logger.debug(
-                "[FastMCP debug] listRoots method not supported by client"
-              );
-            } else {
-              this.#logger.error(
-                `[FastMCP error] received error listing roots.
+      this.#server.setNotificationHandler(RootsListChangedNotificationSchema, () => {
+        this.#server.listRoots().then((roots) => {
+          this.#roots = roots.roots;
+          this.emit("rootsChanged", {
+            roots: roots.roots
+          });
+        }).catch((error) => {
+          if (error instanceof McpError && error.code === ErrorCode.MethodNotFound) {
+            this.#logger.debug("[FastMCP debug] listRoots method not supported by client");
+          } else {
+            this.#logger.error(
+              `[FastMCP error] received error listing roots.
 
 ${error instanceof Error ? error.stack : JSON.stringify(error)}`
-              );
-            }
-          });
-        }
-      );
+            );
+          }
+        });
+      });
     } else {
-      this.#logger.debug(
-        "[FastMCP debug] roots capability not available, not setting up notification handler"
-      );
+      this.#logger.debug("[FastMCP debug] roots capability not available, not setting up notification handler");
     }
   }
   setupToolHandlers(tools) {
@@ -813,16 +753,11 @@ ${error instanceof Error ? error.stack : JSON.stringify(error)}`
     this.#server.setRequestHandler(CallToolRequestSchema, async (request) => {
       const tool = tools.find((tool2) => tool2.name === request.params.name);
       if (!tool) {
-        throw new McpError(
-          ErrorCode.MethodNotFound,
-          `Unknown tool: ${request.params.name}`
-        );
+        throw new McpError(ErrorCode.MethodNotFound, `Unknown tool: ${request.params.name}`);
       }
       let args = void 0;
       if (tool.parameters) {
-        const parsed = await tool.parameters["~standard"].validate(
-          request.params.arguments
-        );
+        const parsed = await tool.parameters["~standard"].validate(request.params.arguments);
         if (parsed.issues) {
           const friendlyErrors = this.#utils?.formatInvalidParamsErrorMessage ? this.#utils.formatInvalidParamsErrorMessage(parsed.issues) : parsed.issues.map((issue) => {
             const path = issue.path?.join(".") || "root";
@@ -958,7 +893,7 @@ ${error instanceof Error ? error.stack : JSON.stringify(error)}`
           result = ContentResultZodSchema.parse(maybeStringResult);
         }
       } catch (error) {
-        if (error instanceof McpError) {
+        if (isMcpErrorLike(error)) {
           throw error;
         }
         if (error instanceof UserError) {
@@ -1048,9 +983,7 @@ var FastMCP = class extends FastMCPEventEmitter {
    * @returns Promise<ResourceContent> - The embedded resource content
    */
   async embedded(uri) {
-    const directResource = this.#resources.find(
-      (resource) => resource.uri === uri
-    );
+    const directResource = this.#resources.find((resource) => resource.uri === uri);
     if (directResource) {
       const result = await directResource.load();
       const results = Array.isArray(result) ? result : [result];
@@ -1073,9 +1006,7 @@ var FastMCP = class extends FastMCPEventEmitter {
       if (!params) {
         continue;
       }
-      const result = await template.load(
-        params
-      );
+      const result = await template.load(params);
       const resourceData = {
         mimeType: template.mimeType,
         uri
@@ -1100,9 +1031,7 @@ var FastMCP = class extends FastMCPEventEmitter {
       let auth;
       if (this.#authenticate) {
         try {
-          auth = await this.#authenticate(
-            void 0
-          );
+          auth = await this.#authenticate(void 0);
         } catch (error) {
           this.#logger.error(
             "[FastMCP error] Authentication failed for stdio transport:",
@@ -1172,9 +1101,7 @@ var FastMCP = class extends FastMCPEventEmitter {
           onClose: async () => {
           },
           onConnect: async () => {
-            this.#logger.debug(
-              `[FastMCP debug] Stateless HTTP Stream request handled`
-            );
+            this.#logger.debug(`[FastMCP debug] Stateless HTTP Stream request handled`);
           },
           onUnhandledRequest: async (req, res) => {
             await this.#handleUnhandledRequest(req, res, true, httpConfig.host);
@@ -1212,12 +1139,7 @@ var FastMCP = class extends FastMCPEventEmitter {
             });
           },
           onUnhandledRequest: async (req, res) => {
-            await this.#handleUnhandledRequest(
-              req,
-              res,
-              false,
-              httpConfig.host
-            );
+            await this.#handleUnhandledRequest(req, res, false, httpConfig.host);
           },
           port: httpConfig.port,
           stateless: httpConfig.stateless,
@@ -1248,9 +1170,7 @@ var FastMCP = class extends FastMCPEventEmitter {
       const errorMessage = "error" in auth && typeof auth.error === "string" ? auth.error : "Authentication failed";
       throw new Error(errorMessage);
     }
-    const allowedTools = auth ? this.#tools.filter(
-      (tool) => tool.canAccess ? tool.canAccess(auth) : true
-    ) : this.#tools;
+    const allowedTools = auth ? this.#tools.filter((tool) => tool.canAccess ? tool.canAccess(auth) : true) : this.#tools;
     return new FastMCPSession({
       auth,
       instructions: this.#options.instructions,
@@ -1296,9 +1216,7 @@ var FastMCP = class extends FastMCPEventEmitter {
               "Content-Type": "application/json"
             }).end(JSON.stringify(response));
           } else {
-            const readySessions = this.#sessions.filter(
-              (s) => s.isReady
-            ).length;
+            const readySessions = this.#sessions.filter((s) => s.isReady).length;
             const totalSessions = this.#sessions.length;
             const allReady = readySessions === totalSessions && totalSessions > 0;
             const response = {
@@ -1320,18 +1238,14 @@ var FastMCP = class extends FastMCPEventEmitter {
     if (oauthConfig?.enabled && req.method === "GET") {
       const url = new URL(req.url || "", `http://${host}`);
       if (url.pathname === "/.well-known/oauth-authorization-server" && oauthConfig.authorizationServer) {
-        const metadata = convertObjectToSnakeCase(
-          oauthConfig.authorizationServer
-        );
+        const metadata = convertObjectToSnakeCase(oauthConfig.authorizationServer);
         res.writeHead(200, {
           "Content-Type": "application/json"
         }).end(JSON.stringify(metadata));
         return;
       }
       if (url.pathname === "/.well-known/oauth-protected-resource" && oauthConfig.protectedResource) {
-        const metadata = convertObjectToSnakeCase(
-          oauthConfig.protectedResource
-        );
+        const metadata = convertObjectToSnakeCase(oauthConfig.protectedResource);
         res.writeHead(200, {
           "Content-Type": "application/json"
         }).end(JSON.stringify(metadata));
@@ -1358,9 +1272,7 @@ var FastMCP = class extends FastMCPEventEmitter {
     const envHost = process.env.FASTMCP_HOST;
     const transportType = overrides?.transportType || (transportArg === "http-stream" ? "httpStream" : transportArg) || envTransport || "stdio";
     if (transportType === "httpStream") {
-      const port = parseInt(
-        overrides?.httpStream?.port?.toString() || portArg || envPort || "8080"
-      );
+      const port = parseInt(overrides?.httpStream?.port?.toString() || portArg || envPort || "8080");
       const host = overrides?.httpStream?.host || hostArg || envHost || "localhost";
       const endpoint = overrides?.httpStream?.endpoint || endpointArg || envEndpoint || "/mcp";
       const enableJsonResponse = overrides?.httpStream?.enableJsonResponse || false;
@@ -1389,6 +1301,7 @@ var FastMCP = class extends FastMCPEventEmitter {
   }
 };
 export {
+  CustomMcpError,
   ErrorCode2 as ErrorCode,
   FastMCP,
   FastMCPSession,
@@ -1396,6 +1309,7 @@ export {
   UnexpectedStateError,
   UserError,
   audioContent,
-  imageContent
+  imageContent,
+  isMcpErrorLike
 };
 //# sourceMappingURL=FastMCP.js.map
