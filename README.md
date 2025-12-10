@@ -69,13 +69,13 @@ npm install fastmcp
 > There are many real-world examples of using FastMCP in the wild. See the [Showcase](#showcase) for examples.
 
 ```ts
-import { FastMCP } from "fastmcp";
-import { z } from "zod"; // Or any validation library that supports Standard Schema
+import { FastMCP } from "fastmcp"
+import { z } from "zod" // Or any validation library that supports Standard Schema
 
 const server = new FastMCP({
   name: "My Server",
   version: "1.0.0",
-});
+})
 
 server.addTool({
   name: "add",
@@ -85,13 +85,13 @@ server.addTool({
     b: z.number(),
   }),
   execute: async (args) => {
-    return String(args.a + args.b);
+    return String(args.a + args.b)
   },
-});
+})
 
 server.start({
   transportType: "stdio",
-});
+})
 ```
 
 _That's it!_ You have a working MCP server.
@@ -129,7 +129,7 @@ server.start({
   httpStream: {
     port: 8080,
   },
-});
+})
 ```
 
 This will start the server and listen for HTTP streaming connections on `http://localhost:8080/mcp`.
@@ -143,7 +143,7 @@ You can connect to these servers using the appropriate client transport.
 For HTTP streaming connections:
 
 ```ts
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 
 const client = new Client(
   {
@@ -153,19 +153,17 @@ const client = new Client(
   {
     capabilities: {},
   },
-);
+)
 
-const transport = new StreamableHTTPClientTransport(
-  new URL(`http://localhost:8080/mcp`),
-);
+const transport = new StreamableHTTPClientTransport(new URL(`http://localhost:8080/mcp`))
 
-await client.connect(transport);
+await client.connect(transport)
 ```
 
 For SSE connections:
 
 ```ts
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js"
 
 const client = new Client(
   {
@@ -175,11 +173,11 @@ const client = new Client(
   {
     capabilities: {},
   },
-);
+)
 
-const transport = new SSEClientTransport(new URL(`http://localhost:8080/sse`));
+const transport = new SSEClientTransport(new URL(`http://localhost:8080/sse`))
 
-await client.connect(transport);
+await client.connect(transport)
 ```
 
 #### Stateless Mode
@@ -202,7 +200,7 @@ server.start({
     port: 8080,
     stateless: true,
   },
-});
+})
 ```
 
 > **Note:** Stateless mode is only available with HTTP streaming transport. Features that depend on persistent sessions (like session-specific state) will not be available in stateless mode.
@@ -239,7 +237,7 @@ FastMCP uses the [Standard Schema](https://standardschema.dev) specification for
 **Zod Example:**
 
 ```typescript
-import { z } from "zod";
+import { z } from "zod"
 
 server.addTool({
   name: "fetch-zod",
@@ -248,15 +246,15 @@ server.addTool({
     url: z.string(),
   }),
   execute: async (args) => {
-    return await fetchWebpageContent(args.url);
+    return await fetchWebpageContent(args.url)
   },
-});
+})
 ```
 
 **ArkType Example:**
 
 ```typescript
-import { type } from "arktype";
+import { type } from "arktype"
 
 server.addTool({
   name: "fetch-arktype",
@@ -265,9 +263,9 @@ server.addTool({
     url: "string",
   }),
   execute: async (args) => {
-    return await fetchWebpageContent(args.url);
+    return await fetchWebpageContent(args.url)
   },
-});
+})
 ```
 
 **Valibot Example:**
@@ -275,7 +273,7 @@ server.addTool({
 Valibot requires the peer dependency @valibot/to-json-schema.
 
 ```typescript
-import * as v from "valibot";
+import * as v from "valibot"
 
 server.addTool({
   name: "fetch-valibot",
@@ -284,9 +282,9 @@ server.addTool({
     url: v.string(),
   }),
   execute: async (args) => {
-    return await fetchWebpageContent(args.url);
+    return await fetchWebpageContent(args.url)
   },
-});
+})
 ```
 
 #### Tools Without Parameters
@@ -301,24 +299,24 @@ When creating tools that don't require parameters, you have two options:
      description: "Say hello",
      // No parameters property
      execute: async () => {
-       return "Hello, world!";
+       return "Hello, world!"
      },
-   });
+   })
    ```
 
 2. Explicitly define empty parameters:
 
    ```typescript
-   import { z } from "zod";
+   import { z } from "zod"
 
    server.addTool({
      name: "sayHello",
      description: "Say hello",
      parameters: z.object({}), // Empty object
      execute: async () => {
-       return "Hello, world!";
+       return "Hello, world!"
      },
-   });
+   })
    ```
 
 > [!NOTE]
@@ -335,7 +333,7 @@ server.addTool({
   description: "An admin-only tool",
   canAccess: (auth) => auth?.role === "admin",
   execute: async () => "Welcome, admin!",
-});
+})
 ```
 
 #### Returning a string
@@ -350,9 +348,9 @@ server.addTool({
     url: z.string(),
   }),
   execute: async (args) => {
-    return "Hello, world!";
+    return "Hello, world!"
   },
-});
+})
 ```
 
 The latter is equivalent to:
@@ -372,9 +370,9 @@ server.addTool({
           text: "Hello, world!",
         },
       ],
-    };
+    }
   },
-});
+})
 ```
 
 #### Returning a list
@@ -394,9 +392,9 @@ server.addTool({
         { type: "text", text: "First message" },
         { type: "text", text: "Second message" },
       ],
-    };
+    }
   },
-});
+})
 ```
 
 #### Returning an image
@@ -404,7 +402,7 @@ server.addTool({
 Use the `imageContent` to create a content object for an image:
 
 ```js
-import { imageContent } from "fastmcp";
+import { imageContent } from "fastmcp"
 
 server.addTool({
   name: "download",
@@ -415,7 +413,7 @@ server.addTool({
   execute: async (args) => {
     return imageContent({
       url: "https://example.com/image.png",
-    });
+    })
 
     // or...
     // return imageContent({
@@ -434,7 +432,7 @@ server.addTool({
     //   ],
     // };
   },
-});
+})
 ```
 
 The `imageContent` function takes the following options:
@@ -463,9 +461,9 @@ server.addTool({
           mimeType: "image/png",
         },
       ],
-    };
+    }
   },
-});
+})
 ```
 
 #### Configurable Ping Behavior
@@ -484,7 +482,7 @@ const server = new FastMCP({
     // Set log level for ping-related messages (default: 'debug')
     logLevel: "debug",
   },
-});
+})
 ```
 
 By default, ping behavior is optimized for each transport type:
@@ -516,12 +514,12 @@ const server = new FastMCP({
     // HTTP status code to return (default: 200)
     status: 200,
   },
-});
+})
 
 await server.start({
   transportType: "httpStream",
   httpStream: { port: 8080 },
-});
+})
 ```
 
 Now a request to `http://localhost:8080/healthz` will return:
@@ -548,7 +546,7 @@ const server = new FastMCP({
     enabled: false,
     // By default, roots support is enabled (true)
   },
-});
+})
 ```
 
 This provides the following benefits:
@@ -562,16 +560,16 @@ You can listen for root changes in your server:
 
 ```ts
 server.on("connect", (event) => {
-  const session = event.session;
+  const session = event.session
 
   // Access the current roots
-  console.log("Initial roots:", session.roots);
+  console.log("Initial roots:", session.roots)
 
   // Listen for changes to the roots
   session.on("rootsChanged", (event) => {
-    console.log("Roots changed:", event.roots);
-  });
-});
+    console.log("Roots changed:", event.roots)
+  })
+})
 ```
 
 When a client doesn't support roots or when roots functionality is explicitly disabled, these operations will gracefully handle the situation without throwing errors.
@@ -581,7 +579,7 @@ When a client doesn't support roots or when roots functionality is explicitly di
 Use the `audioContent` to create a content object for an audio:
 
 ```js
-import { audioContent } from "fastmcp";
+import { audioContent } from "fastmcp"
 
 server.addTool({
   name: "download",
@@ -592,7 +590,7 @@ server.addTool({
   execute: async (args) => {
     return audioContent({
       url: "https://example.com/audio.mp3",
-    });
+    })
 
     // or...
     // return audioContent({
@@ -611,7 +609,7 @@ server.addTool({
     //   ],
     // };
   },
-});
+})
 ```
 
 The `audioContent` function takes the following options:
@@ -640,9 +638,9 @@ server.addTool({
           mimeType: "audio/mpeg",
         },
       ],
-    };
+    }
   },
-});
+})
 ```
 
 #### Return combination type
@@ -674,7 +672,7 @@ server.addTool({
           mimeType: "audio/mpeg",
         },
       ],
-    };
+    }
   },
 
   // or...
@@ -696,7 +694,7 @@ server.addTool({
   //     ],
   //   };
   // },
-});
+})
 ```
 
 #### Custom Logger
@@ -704,27 +702,27 @@ server.addTool({
 FastMCP allows you to provide a custom logger implementation to control how the server logs messages. This is useful for integrating with existing logging infrastructure or customizing log formatting.
 
 ```ts
-import { FastMCP, Logger } from "fastmcp";
+import { FastMCP, Logger } from "fastmcp"
 
 class CustomLogger implements Logger {
   debug(...args: unknown[]): void {
-    console.log("[DEBUG]", new Date().toISOString(), ...args);
+    console.log("[DEBUG]", new Date().toISOString(), ...args)
   }
 
   error(...args: unknown[]): void {
-    console.error("[ERROR]", new Date().toISOString(), ...args);
+    console.error("[ERROR]", new Date().toISOString(), ...args)
   }
 
   info(...args: unknown[]): void {
-    console.info("[INFO]", new Date().toISOString(), ...args);
+    console.info("[INFO]", new Date().toISOString(), ...args)
   }
 
   log(...args: unknown[]): void {
-    console.log("[LOG]", new Date().toISOString(), ...args);
+    console.log("[LOG]", new Date().toISOString(), ...args)
   }
 
   warn(...args: unknown[]): void {
-    console.warn("[WARN]", new Date().toISOString(), ...args);
+    console.warn("[WARN]", new Date().toISOString(), ...args)
   }
 }
 
@@ -732,7 +730,7 @@ const server = new FastMCP({
   name: "My Server",
   version: "1.0.0",
   logger: new CustomLogger(),
-});
+})
 ```
 
 See `src/examples/custom-logger.ts` for examples with Winston, Pino, and file-based logging.
@@ -751,15 +749,15 @@ server.addTool({
   execute: async (args, { log }) => {
     log.info("Downloading file...", {
       url,
-    });
+    })
 
     // ...
 
-    log.info("Downloaded file");
+    log.info("Downloaded file")
 
-    return "done";
+    return "done"
   },
-});
+})
 ```
 
 The `log` object has the following methods:
@@ -778,7 +776,7 @@ FastMCP supports two ways to handle errors in tool execution:
 For standards-compliant error handling, throw `McpError` with appropriate error codes:
 
 ```js
-import { ErrorCode, McpError } from "fastmcp";
+import { ErrorCode, McpError } from "fastmcp"
 
 server.addTool({
   name: "download",
@@ -789,7 +787,7 @@ server.addTool({
   execute: async (args) => {
     if (args.url.startsWith("https://example.com")) {
       // Throw MCP error with InvalidParams code
-      throw new McpError(ErrorCode.InvalidParams, "This URL is not allowed");
+      throw new McpError(ErrorCode.InvalidParams, "This URL is not allowed")
     }
 
     // Throw MCP error with custom data
@@ -797,12 +795,12 @@ server.addTool({
       throw new McpError(ErrorCode.InvalidRequest, "Resource not found", {
         url: args.url,
         statusCode: 404,
-      });
+      })
     }
 
-    return "done";
+    return "done"
   },
-});
+})
 ```
 
 **Available Error Codes:**
@@ -820,7 +818,7 @@ When a tool throws `McpError`, it's propagated through the MCP protocol as a pro
 For backward compatibility, you can still use `UserError` for simple error messages:
 
 ```js
-import { UserError } from "fastmcp";
+import { UserError } from "fastmcp"
 
 server.addTool({
   name: "download",
@@ -830,12 +828,12 @@ server.addTool({
   }),
   execute: async (args) => {
     if (args.url.startsWith("https://example.com")) {
-      throw new UserError("This URL is not allowed");
+      throw new UserError("This URL is not allowed")
     }
 
-    return "done";
+    return "done"
   },
-});
+})
 ```
 
 `UserError` errors are converted to tool responses with `isError: true` and are displayed to the user as text content.
@@ -855,18 +853,18 @@ server.addTool({
     await reportProgress({
       progress: 0,
       total: 100,
-    });
+    })
 
     // ...
 
     await reportProgress({
       progress: 100,
       total: 100,
-    });
+    })
 
-    return "done";
+    return "done"
   },
-});
+})
 ```
 
 #### Streaming Output
@@ -892,13 +890,13 @@ server.addTool({
   },
   execute: async (args, { streamContent }) => {
     // Send initial content immediately
-    await streamContent({ type: "text", text: "Starting generation...\n" });
+    await streamContent({ type: "text", text: "Starting generation...\n" })
 
     // Simulate incremental content generation
-    const words = "The quick brown fox jumps over the lazy dog.".split(" ");
+    const words = "The quick brown fox jumps over the lazy dog.".split(" ")
     for (const word of words) {
-      await streamContent({ type: "text", text: word + " " });
-      await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
+      await streamContent({ type: "text", text: word + " " })
+      await new Promise((resolve) => setTimeout(resolve, 300)) // Simulate delay
     }
 
     // When using streamContent, you can:
@@ -906,12 +904,12 @@ server.addTool({
     // 2. Return a final result (which will be appended to streamed content)
 
     // Option 1: All content was streamed, so return void
-    return;
+    return
 
     // Option 2: Return final content that will be appended
     // return "Generation complete!";
   },
-});
+})
 ```
 
 Streaming works with all content types (text, image, audio) and can be combined with progress reporting:
@@ -927,26 +925,26 @@ server.addTool({
     streamingHint: true,
   },
   execute: async (args, { streamContent, reportProgress }) => {
-    const total = args.datasetSize;
+    const total = args.datasetSize
 
     for (let i = 0; i < total; i++) {
       // Report numeric progress
-      await reportProgress({ progress: i, total });
+      await reportProgress({ progress: i, total })
 
       // Stream intermediate results
       if (i % 10 === 0) {
         await streamContent({
           type: "text",
           text: `Processed ${i} of ${total} items...\n`,
-        });
+        })
       }
 
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      await new Promise((resolve) => setTimeout(resolve, 50))
     }
 
-    return "Processing complete!";
+    return "Processing complete!"
   },
-});
+})
 ```
 
 #### Tool Annotations
@@ -966,9 +964,9 @@ server.addTool({
     openWorldHint: true, // Tool interacts with external entities
   },
   execute: async (args) => {
-    return await fetchWebpageContent(args.url);
+    return await fetchWebpageContent(args.url)
   },
-});
+})
 ```
 
 The available annotations are:
@@ -1002,9 +1000,9 @@ server.addResource({
   async load() {
     return {
       text: await readLogFile(),
-    };
+    }
   },
-});
+})
 ```
 
 > [!NOTE]
@@ -1053,9 +1051,9 @@ server.addResourceTemplate({
   async load({ name }) {
     return {
       text: `Example log content for ${name}`,
-    };
+    }
   },
-});
+})
 ```
 
 #### Resource template argument auto-completion
@@ -1076,21 +1074,21 @@ server.addResourceTemplate({
         if (value === "Example") {
           return {
             values: ["Example Log"],
-          };
+          }
         }
 
         return {
           values: [],
-        };
+        }
       },
     },
   ],
   async load({ name }) {
     return {
       text: `Example log content for ${name}`,
-    };
+    }
   },
-});
+})
 ```
 
 ### Embedded Resources
@@ -1114,9 +1112,9 @@ server.addTool({
           resource: await server.embedded(`user://profile/${args.userId}`),
         },
       ],
-    };
+    }
   },
-});
+})
 ```
 
 #### Working with Resource Templates
@@ -1139,12 +1137,12 @@ server.addResourceTemplate({
     const docs = {
       "getting-started": "# Getting Started\n\nWelcome to our project!",
       "api-reference": "# API Reference\n\nAuthentication is required.",
-    };
+    }
     return {
       text: docs[args.section] || "Documentation not found",
-    };
+    }
   },
-});
+})
 
 // Use embedded resources in a tool
 server.addTool({
@@ -1161,9 +1159,9 @@ server.addTool({
           resource: await server.embedded(`docs://project/${args.section}`),
         },
       ],
-    };
+    }
   },
-});
+})
 ```
 
 #### Working with Direct Resources
@@ -1179,9 +1177,9 @@ server.addResource({
   async load() {
     return {
       text: "System operational",
-    };
+    }
   },
-});
+})
 
 // Use in a tool
 server.addTool({
@@ -1196,9 +1194,9 @@ server.addTool({
           resource: await server.embedded("system://status"),
         },
       ],
-    };
+    }
   },
-});
+})
 ```
 
 ### Prompts
@@ -1217,9 +1215,9 @@ server.addPrompt({
     },
   ],
   load: async (args) => {
-    return `Generate a concise but descriptive commit message for these changes:\n\n${args.changes}`;
+    return `Generate a concise but descriptive commit message for these changes:\n\n${args.changes}`
   },
-});
+})
 ```
 
 #### Prompt argument auto-completion
@@ -1231,7 +1229,7 @@ server.addPrompt({
   name: "countryPoem",
   description: "Writes a poem about a country",
   load: async ({ name }) => {
-    return `Hello, ${name}!`;
+    return `Hello, ${name}!`
   },
   arguments: [
     {
@@ -1242,16 +1240,16 @@ server.addPrompt({
         if (value === "Germ") {
           return {
             values: ["Germany"],
-          };
+          }
         }
 
         return {
           values: [],
-        };
+        }
       },
     },
   ],
-});
+})
 ```
 
 #### Prompt argument auto-completion using `enum`
@@ -1263,7 +1261,7 @@ server.addPrompt({
   name: "countryPoem",
   description: "Writes a poem about a country",
   load: async ({ name }) => {
-    return `Hello, ${name}!`;
+    return `Hello, ${name}!`
   },
   arguments: [
     {
@@ -1273,7 +1271,7 @@ server.addPrompt({
       enum: ["Germany", "France", "Italy"],
     },
   ],
-});
+})
 ```
 
 ### Authentication
@@ -1292,21 +1290,21 @@ const server = new FastMCP({
   name: "My Server",
   version: "1.0.0",
   authenticate: (request) => {
-    const apiKey = request.headers["x-api-key"];
+    const apiKey = request.headers["x-api-key"]
 
     if (apiKey !== "123") {
       throw new Response(null, {
         status: 401,
         statusText: "Unauthorized",
-      });
+      })
     }
 
     // Whatever you return here will be accessible in the `context.session` object.
     return {
       id: 1,
-    };
+    }
   },
-});
+})
 ```
 
 Now you can access the authenticated session data in your tools:
@@ -1315,9 +1313,9 @@ Now you can access the authenticated session data in your tools:
 server.addTool({
   name: "sayHello",
   execute: async (args, { session }) => {
-    return `Hello, ${session.id}!`;
+    return `Hello, ${session.id}!`
   },
-});
+})
 ```
 
 #### Tool Authorization
@@ -1331,12 +1329,12 @@ If `canAccess` is not provided, the tool is accessible to all authenticated user
 ```typescript
 const server = new FastMCP<{ role: "admin" | "user" }>({
   authenticate: async (request) => {
-    const role = request.headers["x-role"] as string;
-    return { role: role === "admin" ? "admin" : "user" };
+    const role = request.headers["x-role"] as string
+    return { role: role === "admin" ? "admin" : "user" }
   },
   name: "My Server",
   version: "1.0.0",
-});
+})
 
 server.addTool({
   name: "admin-dashboard",
@@ -1344,17 +1342,17 @@ server.addTool({
   // Only users with the 'admin' role can see and execute this tool
   canAccess: (auth) => auth?.role === "admin",
   execute: async () => {
-    return "Welcome to the admin dashboard!";
+    return "Welcome to the admin dashboard!"
   },
-});
+})
 
 server.addTool({
   name: "public-info",
   description: "A tool available to everyone",
   execute: async () => {
-    return "This is public information.";
+    return "This is public information."
   },
-});
+})
 ```
 
 In this example, only clients authenticating with the `admin` role will be able to list or call the `admin-dashboard` tool. The `public-info` tool will be available to all authenticated users.
@@ -1364,9 +1362,9 @@ In this example, only clients authenticating with the `admin` role will be able 
 FastMCP includes built-in support for OAuth discovery endpoints, supporting both **MCP Specification 2025-03-26** and **MCP Specification 2025-06-18** for OAuth integration. This makes it easy to integrate with OAuth authorization flows by providing standard discovery endpoints that comply with RFC 8414 (OAuth 2.0 Authorization Server Metadata) and RFC 9470 (OAuth 2.0 Protected Resource Metadata):
 
 ```ts
-import { FastMCP } from "fastmcp";
-import { buildGetJwks } from "get-jwks";
-import fastJwt from "fast-jwt";
+import fastJwt from "fast-jwt"
+import { FastMCP } from "fastmcp"
+import { buildGetJwks } from "get-jwks"
 
 const server = new FastMCP({
   name: "My Server",
@@ -1386,74 +1384,73 @@ const server = new FastMCP({
     },
   },
   authenticate: async (request) => {
-    const authHeader = request.headers.authorization;
+    const authHeader = request.headers.authorization
 
     if (!authHeader?.startsWith("Bearer ")) {
       throw new Response(null, {
         status: 401,
         statusText: "Missing or invalid authorization header",
-      });
+      })
     }
 
-    const token = authHeader.slice(7); // Remove 'Bearer ' prefix
+    const token = authHeader.slice(7) // Remove 'Bearer ' prefix
 
     // Validate OAuth JWT access token using OpenID Connect discovery
     try {
       // TODO: Cache the discovery document to avoid repeated requests
       // Discover OAuth/OpenID configuration from well-known endpoint
-      const discoveryUrl =
-        "https://auth.example.com/.well-known/openid-configuration";
+      const discoveryUrl = "https://auth.example.com/.well-known/openid-configuration"
       // Alternative: Use OAuth authorization server metadata endpoint
       // const discoveryUrl = 'https://auth.example.com/.well-known/oauth-authorization-server';
 
-      const discoveryResponse = await fetch(discoveryUrl);
+      const discoveryResponse = await fetch(discoveryUrl)
       if (!discoveryResponse.ok) {
-        throw new Error("Failed to fetch OAuth discovery document");
+        throw new Error("Failed to fetch OAuth discovery document")
       }
 
-      const config = await discoveryResponse.json();
-      const jwksUri = config.jwks_uri;
-      const issuer = config.issuer;
+      const config = await discoveryResponse.json()
+      const jwksUri = config.jwks_uri
+      const issuer = config.issuer
 
       // Create JWKS client for token verification using discovered endpoint
       const getJwks = buildGetJwks({
         jwksUrl: jwksUri,
         cache: true,
         rateLimit: true,
-      });
+      })
 
       // Create JWT verifier with JWKS and discovered issuer
       const verify = fastJwt.createVerifier({
         key: async (token) => {
-          const { header } = fastJwt.decode(token, { complete: true });
+          const { header } = fastJwt.decode(token, { complete: true })
           const jwk = await getJwks.getJwk({
             kid: header.kid,
             alg: header.alg,
-          });
-          return jwk;
+          })
+          return jwk
         },
         algorithms: ["RS256", "ES256"],
         issuer: issuer,
         audience: "mcp://my-server",
-      });
+      })
 
       // Verify the JWT token
-      const payload = await verify(token);
+      const payload = await verify(token)
 
       return {
         userId: payload.sub,
         scope: payload.scope,
         email: payload.email,
         // Include other claims as needed
-      };
+      }
     } catch (error) {
       throw new Response(null, {
         status: 401,
         statusText: "Invalid OAuth token",
-      });
+      })
     }
   },
-});
+})
 ```
 
 This configuration automatically exposes OAuth discovery endpoints:
@@ -1468,13 +1465,14 @@ For JWT token validation, you can use libraries like [`get-jwks`](https://github
 If you are exposing your MCP server via HTTP, you may wish to allow clients to supply sensitive keys via headers, which can then be passed along to APIs that your tools interact with, allowing each client to supply their own API keys. This can be done by capturing the HTTP headers in the `authenticate` section and storing them in the session to be referenced by the tools later.
 
 ```ts
-import { FastMCP } from "fastmcp";
-import { IncomingHttpHeaders } from "http";
+import { IncomingHttpHeaders } from "http"
+
+import { FastMCP } from "fastmcp"
 
 // Define the session data type
 interface SessionData {
-  headers: IncomingHttpHeaders;
-  [key: string]: unknown; // Add index signature to satisfy Record<string, unknown>
+  headers: IncomingHttpHeaders
+  [key: string]: unknown // Add index signature to satisfy Record<string, unknown>
 }
 
 // Create a server instance
@@ -1485,26 +1483,26 @@ const server = new FastMCP({
     // Authentication logic
     return {
       headers: request.headers,
-    };
+    }
   },
-});
+})
 
 // Tool to display HTTP headers
 server.addTool({
   name: "headerTool",
   description: "Reads HTTP headers from the request",
   execute: async (args: any, context: any) => {
-    const session = context.session as SessionData;
-    const headers = session?.headers ?? {};
+    const session = context.session as SessionData
+    const headers = session?.headers ?? {}
 
     const getHeaderString = (header: string | string[] | undefined) =>
-      Array.isArray(header) ? header.join(", ") : (header ?? "N/A");
+      Array.isArray(header) ? header.join(", ") : (header ?? "N/A")
 
-    const userAgent = getHeaderString(headers["user-agent"]);
-    const authorization = getHeaderString(headers["authorization"]);
-    return `User-Agent: ${userAgent}\nAuthorization: ${authorization}\nAll Headers: ${JSON.stringify(headers, null, 2)}`;
+    const userAgent = getHeaderString(headers["user-agent"])
+    const authorization = getHeaderString(headers["authorization"])
+    return `User-Agent: ${userAgent}\nAuthorization: ${authorization}\nAll Headers: ${JSON.stringify(headers, null, 2)}`
   },
-});
+})
 
 // Start the server
 server.start({
@@ -1512,33 +1510,30 @@ server.start({
   httpStream: {
     port: 8080,
   },
-});
+})
 ```
 
 A client that would connect to this may look something like this:
 
 ```ts
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js"
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 
-const transport = new StreamableHTTPClientTransport(
-  new URL(`http://localhost:8080/mcp`),
-  {
-    requestInit: {
-      headers: {
-        Authorization: "Test 123",
-      },
+const transport = new StreamableHTTPClientTransport(new URL(`http://localhost:8080/mcp`), {
+  requestInit: {
+    headers: {
+      Authorization: "Test 123",
     },
   },
-);
+})
 
 const client = new Client({
   name: "example-client",
   version: "1.0.0",
-});
+})
 
-(async () => {
-  await client.connect(transport);
+;(async () => {
+  await client.connect(transport)
 
   // Call a tool
   const result = await client.callTool({
@@ -1546,10 +1541,10 @@ const client = new Client({
     arguments: {
       arg1: "value",
     },
-  });
+  })
 
-  console.log("Tool result:", result);
-})().catch(console.error);
+  console.log("Tool result:", result)
+})().catch(console.error)
 ```
 
 What would show up in the console after the client runs is something like this:
@@ -1596,16 +1591,16 @@ FastMCP automatically exposes session and request IDs to tool handlers through t
 - Useful for request tracing and debugging
 
 ```ts
-import { FastMCP } from "fastmcp";
-import { z } from "zod";
+import { FastMCP } from "fastmcp"
+import { z } from "zod"
 
 const server = new FastMCP({
   name: "Session Counter Server",
   version: "1.0.0",
-});
+})
 
 // Per-session counter storage
-const sessionCounters = new Map<string, number>();
+const sessionCounters = new Map<string, number>()
 
 server.addTool({
   name: "increment_counter",
@@ -1613,16 +1608,16 @@ server.addTool({
   parameters: z.object({}),
   execute: async (args, context) => {
     if (!context.sessionId) {
-      return "Session ID not available (requires HTTP transport)";
+      return "Session ID not available (requires HTTP transport)"
     }
 
-    const counter = sessionCounters.get(context.sessionId) || 0;
-    const newCounter = counter + 1;
-    sessionCounters.set(context.sessionId, newCounter);
+    const counter = sessionCounters.get(context.sessionId) || 0
+    const newCounter = counter + 1
+    sessionCounters.set(context.sessionId, newCounter)
 
-    return `Counter for session ${context.sessionId}: ${newCounter}`;
+    return `Counter for session ${context.sessionId}: ${newCounter}`
   },
-});
+})
 
 server.addTool({
   name: "show_ids",
@@ -1630,16 +1625,16 @@ server.addTool({
   parameters: z.object({}),
   execute: async (args, context) => {
     return `Session ID: ${context.sessionId || "N/A"}
-Request ID: ${context.requestId || "N/A"}`;
+Request ID: ${context.requestId || "N/A"}`
   },
-});
+})
 
 server.start({
   transportType: "httpStream",
   httpStream: {
     port: 8080,
   },
-});
+})
 ```
 
 **Use Cases:**
@@ -1670,7 +1665,7 @@ const server = new FastMCP({
   version: "1.0.0",
   instructions:
     'Instructions describing how to use the server and its features.\n\nThis can be used by clients to improve the LLM\'s understanding of available tools, resources, etc. It can be thought of like a "hint" to the model. For example, this information MAY be added to the system prompt.',
-});
+})
 ```
 
 ### Sessions
@@ -1678,7 +1673,7 @@ const server = new FastMCP({
 The `session` object is an instance of `FastMCPSession` and it describes active client sessions.
 
 ```ts
-server.sessions;
+server.sessions
 ```
 
 We allocate a new server instance for each client connection to enable 1:1 communication between a client and the server.
@@ -1689,12 +1684,12 @@ You can listen to events emitted by the server using the `on` method:
 
 ```ts
 server.on("connect", (event) => {
-  console.log("Client connected:", event.session);
-});
+  console.log("Client connected:", event.session)
+})
 
 server.on("disconnect", (event) => {
-  console.log("Client disconnected:", event.session);
-});
+  console.log("Client disconnected:", event.session)
+})
 ```
 
 ## `FastMCPSession`
@@ -1721,7 +1716,7 @@ await session.requestSampling({
   systemPrompt: "You are a helpful file system assistant.",
   includeContext: "thisServer",
   maxTokens: 100,
-});
+})
 ```
 
 #### Options
@@ -1747,7 +1742,7 @@ await session.requestSampling(
   {
     // Progress callback - called when progress notifications are received
     onprogress: (progress) => {
-      console.log(`Progress: ${progress.progress}/${progress.total}`);
+      console.log(`Progress: ${progress.progress}/${progress.total}`)
     },
 
     // Abort signal for cancelling the request
@@ -1762,7 +1757,7 @@ await session.requestSampling(
     // Maximum total timeout regardless of progress (no default)
     maxTotalTimeout: 60000,
   },
-);
+)
 ```
 
 **Options:**
@@ -1778,7 +1773,7 @@ await session.requestSampling(
 The `clientCapabilities` property contains the client capabilities.
 
 ```ts
-session.clientCapabilities;
+session.clientCapabilities
 ```
 
 ### `loggingLevel`
@@ -1786,7 +1781,7 @@ session.clientCapabilities;
 The `loggingLevel` property describes the logging level as set by the client.
 
 ```ts
-session.loggingLevel;
+session.loggingLevel
 ```
 
 ### `roots`
@@ -1794,7 +1789,7 @@ session.loggingLevel;
 The `roots` property contains the roots as set by the client.
 
 ```ts
-session.roots;
+session.roots
 ```
 
 ### `server`
@@ -1802,7 +1797,7 @@ session.roots;
 The `server` property contains an instance of MCP server that is associated with the session.
 
 ```ts
-session.server;
+session.server
 ```
 
 ### Typed session events
@@ -1811,12 +1806,12 @@ You can listen to events emitted by the session using the `on` method:
 
 ```ts
 session.on("rootsChanged", (event) => {
-  console.log("Roots changed:", event.roots);
-});
+  console.log("Roots changed:", event.roots)
+})
 
 session.on("error", (event) => {
-  console.error("Error:", event.error);
-});
+  console.error("Error:", event.error)
+})
 ```
 
 ## Running Your Server

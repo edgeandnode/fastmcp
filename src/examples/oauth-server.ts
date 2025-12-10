@@ -10,7 +10,7 @@
  * - http://localhost:4111/.well-known/oauth-protected-resource
  */
 
-import { FastMCP } from "../FastMCP.js";
+import { FastMCP } from "../FastMCP.js"
 
 const server = new FastMCP({
   name: "OAuth Example Server",
@@ -36,20 +36,14 @@ const server = new FastMCP({
       scopesSupported: ["read", "write", "admin"],
       serviceDocumentation: "https://docs.example.com/oauth",
       tokenEndpoint: "https://auth.example.com/oauth/token",
-      tokenEndpointAuthMethodsSupported: [
-        "client_secret_basic",
-        "client_secret_post",
-      ],
+      tokenEndpointAuthMethodsSupported: ["client_secret_basic", "client_secret_post"],
       tokenEndpointAuthSigningAlgValuesSupported: ["RS256", "ES256"],
 
       uiLocalesSupported: ["en-US", "es-ES"],
     },
     enabled: true,
     protectedResource: {
-      authorizationDetailsTypesSupported: [
-        "payment_initiation",
-        "account_access",
-      ],
+      authorizationDetailsTypesSupported: ["payment_initiation", "account_access"],
       authorizationServers: ["https://auth.example.com"],
       bearerMethodsSupported: ["header"],
       dpopBoundAccessTokensRequired: false,
@@ -67,7 +61,7 @@ const server = new FastMCP({
     },
   },
   version: "1.0.0",
-});
+})
 
 // Add a simple tool to demonstrate the server functionality
 server.addTool({
@@ -87,16 +81,16 @@ that need to integrate with OAuth 2.0 authorization flows.`,
           type: "text",
         },
       ],
-    };
+    }
   },
   name: "get-server-info",
-});
+})
 
 // Start the server
 await server.start({
   httpStream: { port: 4111 },
   transportType: "httpStream",
-});
+})
 
 console.log(`
 🚀 OAuth Example Server is running!
@@ -110,4 +104,4 @@ Try these endpoints:
 
 The OAuth endpoints work with both SSE and HTTP Stream transports and return
 JSON metadata following RFC 8414 standards.
-`);
+`)

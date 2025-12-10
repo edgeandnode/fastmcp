@@ -9,61 +9,54 @@
  * npx fastmcp dev src/examples/session-context.ts
  */
 
-import { z } from "zod";
+import { z } from "zod"
 
-import { FastMCP } from "../FastMCP.js";
+import { FastMCP } from "../FastMCP.js"
 
 interface UserSession {
-  [key: string]: unknown;
-  permissions: string[];
-  role: "admin" | "guest" | "user";
-  userId: string;
-  username: string;
+  [key: string]: unknown
+  permissions: string[]
+  role: "admin" | "guest" | "user"
+  userId: string
+  username: string
 }
 
 const server = new FastMCP<UserSession>({
   authenticate: async (request) => {
     if (!request) {
-      console.log(
-        "[Auth] Authenticating stdio transport using environment variables",
-      );
+      console.log("[Auth] Authenticating stdio transport using environment variables")
 
-      const userId = process.env.USER_ID || "default-user";
-      const username = process.env.USERNAME || "Anonymous";
-      const role =
-        (process.env.USER_ROLE as "admin" | "guest" | "user") || "guest";
+      const userId = process.env.USER_ID || "default-user"
+      const username = process.env.USERNAME || "Anonymous"
+      const role = (process.env.USER_ROLE as "admin" | "guest" | "user") || "guest"
       // Mock permissions based on role
       const permissions =
-        role === "admin"
-          ? ["read", "write", "delete", "admin"]
-          : role === "user"
-            ? ["read", "write"]
-            : ["read"];
+        role === "admin" ? ["read", "write", "delete", "admin"] : role === "user" ? ["read", "write"] : ["read"]
       const session: UserSession = {
         authenticatedAt: new Date().toISOString(),
         permissions,
         role,
         userId,
         username,
-      };
+      }
 
-      console.log(`[Auth] Authenticated user: ${username} (${role})`);
+      console.log(`[Auth] Authenticated user: ${username} (${role})`)
 
-      return session;
+      return session
     }
 
     // For HTTP transport (request contains headers)
-    console.log("[Auth] Authenticating HTTP transport using headers");
+    console.log("[Auth] Authenticating HTTP transport using headers")
 
-    const authHeader = request.headers["authorization"] as string;
+    const authHeader = request.headers["authorization"] as string
 
     if (!authHeader || !authHeader.startsWith("Bearer ")) {
       throw new Response("Missing or invalid authorization header", {
         status: 401,
-      });
+      })
     }
 
-    const token = authHeader.substring(7);
+    const token = authHeader.substring(7)
 
     // Mock token validation (in real implementation, validate against your auth service)
     if (token === "admin-token") {
@@ -73,7 +66,7 @@ const server = new FastMCP<UserSession>({
         role: "admin" as const,
         userId: "admin-001",
         username: "Administrator",
-      };
+      }
     } else if (token === "user-token") {
       return {
         authenticatedAt: new Date().toISOString(),
@@ -81,23 +74,22 @@ const server = new FastMCP<UserSession>({
         role: "user" as const,
         userId: "user-001",
         username: "Regular User",
-      };
+      }
     }
 
-    throw new Response("Invalid token", { status: 401 });
+    throw new Response("Invalid token", { status: 401 })
   },
   name: "Session Context Demo",
   version: "1.0.0",
-});
+})
 
 // Tool that demonstrates session context access
 server.addTool({
   description: "Get information about the current authenticated user",
   execute: async (_args, context) => {
-    if (!context.session)
-      return "No session context available (this shouldn't happen after the fix!)";
+    if (!context.session) return "No session context available (this shouldn't happen after the fix!)"
 
-    const { session } = context;
+    const { session } = context
 
     return `✓ Session Context Available!
     
@@ -106,49 +98,46 @@ User Info:
 - Username: ${session.username}  
 - Role: ${session.role}
 - Permissions: ${session.permissions.join(", ")}
-- Authenticated At: ${session.authenticatedAt}`;
+- Authenticated At: ${session.authenticatedAt}`
   },
   name: "whoami",
-});
+})
 
 // Tool that demonstrates role-based access
 server.addTool({
   description: "Perform an admin-only operation (requires admin role)",
   execute: async (args, context) => {
-    if (!context.session)
-      return "No session context - cannot verify permissions";
-    if (context.session.role !== "admin")
-      return `Access denied. Current role: ${context.session.role}, required: admin`;
-    if (!context.session.permissions.includes("admin"))
-      return "Insufficient permissions for admin operations";
+    if (!context.session) return "No session context - cannot verify permissions"
+    if (context.session.role !== "admin") return `Access denied. Current role: ${context.session.role}, required: admin`
+    if (!context.session.permissions.includes("admin")) return "Insufficient permissions for admin operations"
 
-    return `✓ Admin operation "${args.action}" executed successfully by ${context.session.username}`;
+    return `✓ Admin operation "${args.action}" executed successfully by ${context.session.username}`
   },
   name: "admin-operation",
   parameters: z.object({
     action: z.string().describe("The admin action to perform"),
   }),
-});
+})
 
 // Tool that demonstrates permission checks
 server.addTool({
   description: "Check what permissions the current user has",
   execute: async (args, context) => {
-    if (!context.session) return "No session context available";
+    if (!context.session) return "No session context available"
 
-    const hasPermission = context.session.permissions.includes(args.operation);
+    const hasPermission = context.session.permissions.includes(args.operation)
 
     return `Permission Check for "${args.operation}":
 ${hasPermission ? "✓ ALLOWED" : "! DENIED"}
 
 Your permissions: ${context.session.permissions.join(", ")}
-Your role: ${context.session.role}`;
+Your role: ${context.session.role}`
   },
   name: "check-permissions",
   parameters: z.object({
     operation: z.string().describe("Operation to check permission for"),
   }),
-});
+})
 
 // Resource that uses session context
 server.addResource({
@@ -165,7 +154,7 @@ server.addResource({
           null,
           2,
         ),
-      };
+      }
     }
 
     return {
@@ -184,12 +173,12 @@ server.addResource({
         null,
         2,
       ),
-    };
+    }
   },
   mimeType: "application/json",
   name: "Current User Information",
   uri: "session://current-user",
-});
+})
 
 // Prompt that uses session context
 server.addPrompt({
@@ -202,31 +191,31 @@ server.addPrompt({
   ],
   description: "Generate a personalized greeting based on the current user",
   load: async (args, auth) => {
-    const style = args.style || "friendly";
+    const style = args.style || "friendly"
 
     if (!auth) {
-      return "Hello! I don't have access to your session information.";
+      return "Hello! I don't have access to your session information."
     }
 
     const greetings = {
       casual: `Hey ${auth.username}! Nice to see you again.`,
       formal: `Good day, ${auth.username}. You are logged in with ${auth.role} privileges.`,
       friendly: `Hello ${auth.username}! 😊 You're logged in as a ${auth.role}. How can I help you today?`,
-    };
+    }
 
-    return greetings[style as keyof typeof greetings] || greetings.friendly;
+    return greetings[style as keyof typeof greetings] || greetings.friendly
   },
   name: "personalized-greeting",
-});
+})
 
 // Start the server
 if (process.argv.includes("--http-stream")) {
-  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000;
+  const PORT = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000
 
   server.start({
     httpStream: { port: PORT },
     transportType: "httpStream",
-  });
+  })
 
   console.log(`
 🚀 Session Context Demo server running on HTTP Stream!
@@ -240,9 +229,9 @@ curl -H "Authorization: Bearer admin-token" \\
      -H "Content-Type: application/json" \\
      -d '{"method":"tools/call","params":{"name":"whoami","arguments":{}}}' \\
      http://localhost:${PORT}/mcp
-`);
+`)
 } else {
-  server.start({ transportType: "stdio" });
+  server.start({ transportType: "stdio" })
 
   console.log(`
 🚀 Session Context Demo server started with stdio transport!
@@ -265,5 +254,5 @@ Available resources:
 
 Available prompts:
 - personalized-greeting: Get a personalized greeting
-`);
+`)
 }

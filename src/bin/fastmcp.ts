@@ -1,8 +1,7 @@
 #!/usr/bin/env node
-
-import { execa } from "execa";
-import yargs from "yargs";
-import { hideBin } from "yargs/helpers";
+import { execa } from "execa"
+import yargs from "yargs"
+import { hideBin } from "yargs/helpers"
 
 await yargs(hideBin(process.argv))
   .scriptName("fastmcp")
@@ -29,21 +28,19 @@ await yargs(hideBin(process.argv))
           default: false,
           describe: "Enable verbose logging",
           type: "boolean",
-        });
+        })
     },
 
     async (argv) => {
       try {
         const command = argv.watch
           ? `npx @wong2/mcp-cli npx tsx --watch ${argv.file}`
-          : `npx @wong2/mcp-cli npx tsx ${argv.file}`;
+          : `npx @wong2/mcp-cli npx tsx ${argv.file}`
 
         if (argv.verbose) {
-          console.log(`[FastMCP] Starting server: ${command}`);
-          console.log(`[FastMCP] File: ${argv.file}`);
-          console.log(
-            `[FastMCP] Watch mode: ${argv.watch ? "enabled" : "disabled"}`,
-          );
+          console.log(`[FastMCP] Starting server: ${command}`)
+          console.log(`[FastMCP] File: ${argv.file}`)
+          console.log(`[FastMCP] Watch mode: ${argv.watch ? "enabled" : "disabled"}`)
         }
 
         await execa({
@@ -51,18 +48,18 @@ await yargs(hideBin(process.argv))
           stderr: "inherit",
           stdin: "inherit",
           stdout: "inherit",
-        })`${command}`;
+        })`${command}`
       } catch (error) {
         console.error(
           "[FastMCP Error] Failed to start development server:",
           error instanceof Error ? error.message : String(error),
-        );
+        )
 
         if (argv.verbose && error instanceof Error && error.stack) {
-          console.error("[FastMCP Debug] Stack trace:", error.stack);
+          console.error("[FastMCP Debug] Stack trace:", error.stack)
         }
 
-        process.exit(1);
+        process.exit(1)
       }
     },
   )
@@ -75,7 +72,7 @@ await yargs(hideBin(process.argv))
         demandOption: true,
         describe: "The path to the server file",
         type: "string",
-      });
+      })
     },
 
     async (argv) => {
@@ -83,14 +80,14 @@ await yargs(hideBin(process.argv))
         await execa({
           stderr: "inherit",
           stdout: "inherit",
-        })`npx @modelcontextprotocol/inspector npx tsx ${argv.file}`;
+        })`npx @modelcontextprotocol/inspector npx tsx ${argv.file}`
       } catch (error) {
         console.error(
           "[FastMCP Error] Failed to inspect server:",
           error instanceof Error ? error.message : String(error),
-        );
+        )
 
-        process.exit(1);
+        process.exit(1)
       }
     },
   )
@@ -111,42 +108,40 @@ await yargs(hideBin(process.argv))
           default: false,
           describe: "Enable strict validation (type checking)",
           type: "boolean",
-        });
+        })
     },
 
     async (argv) => {
       try {
-        const { existsSync } = await import("fs");
-        const { resolve } = await import("path");
-        const filePath = resolve(argv.file);
+        const { existsSync } = await import("fs")
+        const { resolve } = await import("path")
+        const filePath = resolve(argv.file)
 
         if (!existsSync(filePath)) {
-          console.error(`[FastMCP Error] File not found: ${filePath}`);
-          process.exit(1);
+          console.error(`[FastMCP Error] File not found: ${filePath}`)
+          process.exit(1)
         }
 
-        console.log(`[FastMCP] Validating server file: ${filePath}`);
+        console.log(`[FastMCP] Validating server file: ${filePath}`)
 
-        const command = argv.strict
-          ? `npx tsc --noEmit --strict ${filePath}`
-          : `npx tsc --noEmit ${filePath}`;
+        const command = argv.strict ? `npx tsc --noEmit --strict ${filePath}` : `npx tsc --noEmit ${filePath}`
 
         try {
           await execa({
             shell: true,
             stderr: "pipe",
             stdout: "pipe",
-          })`${command}`;
+          })`${command}`
 
-          console.log("[FastMCP] ✓ TypeScript compilation successful");
+          console.log("[FastMCP] ✓ TypeScript compilation successful")
         } catch (tsError) {
-          console.error("[FastMCP] ✗ TypeScript compilation failed");
+          console.error("[FastMCP] ✗ TypeScript compilation failed")
 
           if (tsError instanceof Error && "stderr" in tsError) {
-            console.error(tsError.stderr);
+            console.error(tsError.stderr)
           }
 
-          process.exit(1);
+          process.exit(1)
         }
 
         try {
@@ -165,27 +160,22 @@ await yargs(hideBin(process.argv))
                 process.exit(1);
               }
             })();
-          "`;
+          "`
         } catch {
-          console.error("[FastMCP] ✗ Server structure validation failed");
-          console.error("Make sure the file properly imports and uses FastMCP");
+          console.error("[FastMCP] ✗ Server structure validation failed")
+          console.error("Make sure the file properly imports and uses FastMCP")
 
-          process.exit(1);
+          process.exit(1)
         }
 
-        console.log(
-          "[FastMCP] ✓ All validations passed! Server file looks good.",
-        );
+        console.log("[FastMCP] ✓ All validations passed! Server file looks good.")
       } catch (error) {
-        console.error(
-          "[FastMCP Error] Validation failed:",
-          error instanceof Error ? error.message : String(error),
-        );
+        console.error("[FastMCP Error] Validation failed:", error instanceof Error ? error.message : String(error))
 
-        process.exit(1);
+        process.exit(1)
       }
     },
   )
 
   .help()
-  .parseAsync();
+  .parseAsync()

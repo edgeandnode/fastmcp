@@ -1,6 +1,8 @@
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js";
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
+import { setTimeout as delay } from "timers/promises"
+
+import { Client } from "@modelcontextprotocol/sdk/client/index.js"
+import { SSEClientTransport } from "@modelcontextprotocol/sdk/client/sse.js"
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js"
 import {
   CreateMessageRequestSchema,
   ErrorCode,
@@ -9,56 +11,48 @@ import {
   McpError,
   PingRequestSchema,
   Root,
-} from "@modelcontextprotocol/sdk/types.js";
-import { createEventSource, EventSourceClient } from "eventsource-client";
-import { getRandomPort } from "get-port-please";
-import { setTimeout as delay } from "timers/promises";
-import { fetch } from "undici";
-import { expect, test, vi } from "vitest";
-import { z } from "zod";
-import { z as z4 } from "zod/v4";
+} from "@modelcontextprotocol/sdk/types.js"
+import { createEventSource, EventSourceClient } from "eventsource-client"
+import { getRandomPort } from "get-port-please"
+import { fetch } from "undici"
+import { expect, test, vi } from "vitest"
+import { z } from "zod"
+import { z as z4 } from "zod/v4"
 
 import {
   audioContent,
-  type ContentResult,
   FastMCP,
   FastMCPSession,
   imageContent,
-  type TextContent,
   UserError,
-} from "./FastMCP.js";
+  type ContentResult,
+  type TextContent,
+} from "./FastMCP.js"
 
 const runWithTestServer = async ({
   client: createClient,
   run,
   server: createServer,
 }: {
-  client?: () => Promise<Client>;
-  run: ({
-    client,
-    server,
-  }: {
-    client: Client;
-    server: FastMCP;
-    session: FastMCPSession;
-  }) => Promise<void>;
-  server?: () => Promise<FastMCP>;
+  client?: () => Promise<Client>
+  run: ({ client, server }: { client: Client; server: FastMCP; session: FastMCPSession }) => Promise<void>
+  server?: () => Promise<FastMCP>
 }) => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = createServer
     ? await createServer()
     : new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
   await server.start({
     httpStream: {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     const client = createClient
@@ -71,29 +65,27 @@ const runWithTestServer = async ({
           {
             capabilities: {},
           },
-        );
+        )
 
-    const transport = new SSEClientTransport(
-      new URL(`http://localhost:${port}/sse`),
-    );
+    const transport = new SSEClientTransport(new URL(`http://localhost:${port}/sse`))
 
     const session = await new Promise<FastMCPSession>((resolve) => {
       server.on("connect", async (event) => {
         // Wait for session to be fully ready before resolving
-        await event.session.waitForReady();
-        resolve(event.session);
-      });
+        await event.session.waitForReady()
+        resolve(event.session)
+      })
 
-      client.connect(transport);
-    });
+      client.connect(transport)
+    })
 
-    await run({ client, server, session });
+    await run({ client, server, session })
   } finally {
-    await server.stop();
+    await server.stop()
   }
 
-  return port;
-};
+  return port
+}
 
 test("adds tools", async () => {
   await runWithTestServer({
@@ -115,30 +107,30 @@ test("adds tools", async () => {
             name: "add",
           },
         ],
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Add two numbers",
         execute: async (args) => {
-          return String(args.a + args.b);
+          return String(args.a + args.b)
         },
         name: "add",
         parameters: z.object({
           a: z.number(),
           b: z.number(),
         }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("adds tools with Zod v4 schema", async () => {
   await runWithTestServer({
@@ -160,55 +152,55 @@ test("adds tools with Zod v4 schema", async () => {
             name: "add-zod-v4",
           },
         ],
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       const AddParamsZod4 = z4.object({
         a: z4.number(),
         b: z4.number(),
-      });
+      })
 
       server.addTool({
         description: "Add two numbers (using Zod v4 schema)",
         execute: async (args) => {
-          return String(args.a + args.b);
+          return String(args.a + args.b)
         },
         name: "add-zod-v4",
         parameters: AddParamsZod4,
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("health endpoint returns ok", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP({
     health: { message: "healthy", path: "/healthz" },
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   await server.start({
     httpStream: { port },
     transportType: "httpStream",
-  });
+  })
 
   try {
-    const response = await fetch(`http://localhost:${port}/healthz`);
-    expect(response.status).toBe(200);
-    expect(await response.text()).toBe("healthy");
+    const response = await fetch(`http://localhost:${port}/healthz`)
+    expect(response.status).toBe(200)
+    expect(await response.text()).toBe("healthy")
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("calls a tool", async () => {
   await runWithTestServer({
@@ -223,30 +215,30 @@ test("calls a tool", async () => {
         }),
       ).toEqual({
         content: [{ text: "3", type: "text" }],
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Add two numbers",
         execute: async (args) => {
-          return String(args.a + args.b);
+          return String(args.a + args.b)
         },
         name: "add",
         parameters: z.object({
           a: z.number(),
           b: z.number(),
         }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("returns a list", async () => {
   await runWithTestServer({
@@ -264,13 +256,13 @@ test("returns a list", async () => {
           { text: "a", type: "text" },
           { text: "b", type: "text" },
         ],
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Add two numbers",
@@ -280,19 +272,19 @@ test("returns a list", async () => {
               { text: "a", type: "text" },
               { text: "b", type: "text" },
             ],
-          };
+          }
         },
         name: "add",
         parameters: z.object({
           a: z.number(),
           b: z.number(),
         }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("returns an image", async () => {
   await runWithTestServer({
@@ -313,13 +305,13 @@ test("returns an image", async () => {
             type: "image",
           },
         ],
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Add two numbers",
@@ -329,19 +321,19 @@ test("returns an image", async () => {
               "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=",
               "base64",
             ),
-          });
+          })
         },
         name: "add",
         parameters: z.object({
           a: z.number(),
           b: z.number(),
         }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("returns an audio", async () => {
   await runWithTestServer({
@@ -362,13 +354,13 @@ test("returns an audio", async () => {
             type: "audio",
           },
         ],
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Add two numbers",
@@ -378,19 +370,19 @@ test("returns an audio", async () => {
               "UklGRhwMAABXQVZFZm10IBAAAAABAAEAgD4AAIA+AAABAAgAZGF0Ya4LAACAgICAgICAgICAgICAgICAgICAgICAgICAf3hxeH+AfXZ1eHx6dnR5fYGFgoOKi42aloubq6GOjI2Op7ythXJ0eYF5aV1AOFFib32HmZSHhpCalIiYi4SRkZaLfnhxaWptb21qaWBea2BRYmZTVmFgWFNXVVVhaGdbYGhZbXh1gXZ1goeIlot1k6yxtKaOkaWhq7KonKCZoaCjoKWuqqmurK6ztrO7tbTAvru/vb68vbW6vLGqsLOfm5yal5KKhoyBeHt2dXBnbmljVlJWUEBBPDw9Mi4zKRwhIBYaGRQcHBURGB0XFxwhGxocJSstMjg6PTc6PUxVV1lWV2JqaXN0coCHhIyPjpOenqWppK6xu72yxMu9us7Pw83Wy9nY29ve6OPr6uvs6ezu6ejk6erm3uPj3dbT1sjBzdDFuMHAt7m1r7W6qaCupJOTkpWPgHqAd3JrbGlnY1peX1hTUk9PTFRKR0RFQkRBRUVEQkdBPjs9Pzo6NT04Njs+PTxAPzo/Ojk6PEA5PUJAQD04PkRCREZLUk1KT1BRUVdXU1VRV1tZV1xgXltcXF9hXl9eY2VmZmlna3J0b3F3eHyBfX+JgIWJiouTlZCTmpybnqSgnqyrqrO3srK2uL2/u7jAwMLFxsfEv8XLzcrIy83JzcrP0s3M0dTP0drY1dPR1dzc19za19XX2dnU1NjU0dXPzdHQy8rMysfGxMLBvLu3ta+sraeioJ2YlI+MioeFfX55cnJsaWVjXVlbVE5RTktHRUVAPDw3NC8uLyknKSIiJiUdHiEeGx4eHRwZHB8cHiAfHh8eHSEhISMoJyMnKisrLCszNy8yOTg9QEJFRUVITVFOTlJVWltaXmNfX2ZqZ21xb3R3eHqAhoeJkZKTlZmhpJ6kqKeur6yxtLW1trW4t6+us7axrbK2tLa6ury7u7u9u7vCwb+/vr7Ev7y9v8G8vby6vru4uLq+tri8ubi5t7W4uLW5uLKxs7G0tLGwt7Wvs7avr7O0tLW4trS4uLO1trW1trm1tLm0r7Kyr66wramsqaKlp52bmpeWl5KQkImEhIB8fXh3eHJrbW5mYGNcWFhUUE1LRENDQUI9ODcxLy8vMCsqLCgoKCgpKScoKCYoKygpKyssLi0sLi0uMDIwMTIuLzQ0Njg4Njc8ODlBQ0A/RUdGSU5RUVFUV1pdXWFjZGdpbG1vcXJ2eXh6fICAgIWIio2OkJGSlJWanJqbnZ2cn6Kkp6enq62srbCysrO1uLy4uL+/vL7CwMHAvb/Cvbq9vLm5uba2t7Sysq+urqyqqaalpqShoJ+enZuamZqXlZWTkpGSkpCNjpCMioqLioiHhoeGhYSGg4GDhoKDg4GBg4GBgoGBgoOChISChISChIWDg4WEgoSEgYODgYGCgYGAgICAgX99f398fX18e3p6e3t7enp7fHx4e3x6e3x7fHx9fX59fn1+fX19fH19fnx9fn19fX18fHx7fHx6fH18fXx8fHx7fH1+fXx+f319fn19fn1+gH9+f4B/fn+AgICAgH+AgICAgIGAgICAgH9+f4B+f35+fn58e3t8e3p5eXh4d3Z1dHRzcXBvb21sbmxqaWhlZmVjYmFfX2BfXV1cXFxaWVlaWVlYV1hYV1hYWVhZWFlaWllbXFpbXV5fX15fYWJhYmNiYWJhYWJjZGVmZ2hqbG1ub3Fxc3V3dnd6e3t8e3x+f3+AgICAgoGBgoKDhISFh4aHiYqKi4uMjYyOj4+QkZKUlZWXmJmbm52enqCioqSlpqeoqaqrrK2ur7CxsrGys7O0tbW2tba3t7i3uLe4t7a3t7i3tre2tba1tLSzsrKysbCvrq2sq6qop6alo6OioJ+dnJqZmJeWlJKSkI+OjoyLioiIh4WEg4GBgH9+fXt6eXh3d3V0c3JxcG9ubWxsamppaWhnZmVlZGRjYmNiYWBhYGBfYF9fXl5fXl1dXVxdXF1dXF1cXF1cXF1dXV5dXV5fXl9eX19gYGFgYWJhYmFiY2NiY2RjZGNkZWRlZGVmZmVmZmVmZ2dmZ2hnaGhnaGloZ2hpaWhpamlqaWpqa2pra2xtbGxtbm1ubm5vcG9wcXBxcnFycnN0c3N0dXV2d3d4eHh5ent6e3x9fn5/f4CAgIGCg4SEhYaGh4iIiYqLi4uMjY2Oj5CQkZGSk5OUlJWWlpeYl5iZmZqbm5ybnJ2cnZ6en56fn6ChoKChoqGio6KjpKOko6SjpKWkpaSkpKSlpKWkpaSlpKSlpKOkpKOko6KioaKhoaCfoJ+enp2dnJybmpmZmJeXlpWUk5STkZGQj4+OjYyLioqJh4eGhYSEgoKBgIB/fn59fHt7enl5eHd3dnZ1dHRzc3JycXBxcG9vbm5tbWxrbGxraWppaWhpaGdnZ2dmZ2ZlZmVmZWRlZGVkY2RjZGNkZGRkZGRkZGRkZGRjZGRkY2RjZGNkZWRlZGVmZWZmZ2ZnZ2doaWhpaWpra2xsbW5tbm9ub29wcXFycnNzdHV1dXZ2d3d4eXl6enp7fHx9fX5+f4CAgIGAgYGCgoOEhISFhoWGhoeIh4iJiImKiYqLiouLjI2MjI2OjY6Pj46PkI+QkZCRkJGQkZGSkZKRkpGSkZGRkZKRkpKRkpGSkZKRkpGSkZKRkpGSkZCRkZCRkI+Qj5CPkI+Pjo+OjY6Njo2MjYyLjIuMi4qLioqJiomJiImIh4iHh4aHhoaFhoWFhIWEg4SDg4KDgoKBgoGAgYCBgICAgICAf4CAf39+f35/fn1+fX59fHx9fH18e3x7fHt6e3p7ent6e3p5enl6enl6eXp5eXl4eXh5eHl4eXh5eHl4eXh5eHh3eHh4d3h4d3h3d3h4d3l4eHd4d3h3eHd4d3h3eHh4eXh5eHl4eHl4eXh5enl6eXp5enl6eXp5ent6ent6e3x7fHx9fH18fX19fn1+fX5/fn9+f4B/gH+Af4CAgICAgIGAgYCBgoGCgYKCgoKDgoOEg4OEg4SFhIWEhYSFhoWGhYaHhoeHhoeGh4iHiIiHiImIiImKiYqJiYqJiouKi4qLiouKi4qLiouKi4qLiouKi4qLi4qLiouKi4qLiomJiomIiYiJiImIh4iIh4iHhoeGhYWGhYaFhIWEg4OEg4KDgoOCgYKBgIGAgICAgH+Af39+f359fn18fX19fHx8e3t6e3p7enl6eXp5enl6enl5eXh5eHh5eHl4eXh5eHl4eHd5eHd3eHl4d3h3eHd4d3h3eHh4d3h4d3h3d3h5eHl4eXh5eHl5eXp5enl6eXp7ent6e3p7e3t7fHt8e3x8fHx9fH1+fX59fn9+f35/gH+AgICAgICAgYGAgYKBgoGCgoKDgoOEg4SEhIWFhIWFhoWGhYaGhoaHhoeGh4aHhoeIh4iHiIeHiIeIh4iHiIeIiIiHiIeIh4iHiIiHiIeIh4iHiIeIh4eIh4eIh4aHh4aHhoeGh4aHhoWGhYaFhoWFhIWEhYSFhIWEhISDhIOEg4OCg4OCg4KDgYKCgYKCgYCBgIGAgYCBgICAgICAgICAf4B/f4B/gH+Af35/fn9+f35/fn1+fn19fn1+fX59fn19fX19fH18fXx9fH18fXx9fH18fXx8fHt8e3x7fHt8e3x7fHt8e3x7fHt8e3x7fHt8e3x7fHt8e3x8e3x7fHt8e3x7fHx8fXx9fH18fX5+fX59fn9+f35+f35/gH+Af4B/gICAgICAgICAgICAgYCBgIGAgIGAgYGBgoGCgYKBgoGCgYKBgoGCgoKDgoOCg4KDgoOCg4KDgoOCg4KDgoOCg4KDgoOCg4KDgoOCg4KDgoOCg4KDgoOCg4KDgoOCg4KDgoOCg4KCgoGCgYKBgoGCgYKBgoGCgYKBgoGCgYKBgoGCgYKBgoGCgYKBgoGCgYKBgoGBgYCBgIGAgYCBgIGAgYCBgIGAgYCBgIGAgYCBgIGAgYCAgICBgIGAgYCBgIGAgYCBgIGAgYCBgExJU1RCAAAASU5GT0lDUkQMAAAAMjAwOC0wOS0yMQAASUVORwMAAAAgAAABSVNGVBYAAABTb255IFNvdW5kIEZvcmdlIDguMAAA",
               "base64",
             ),
-          });
+          })
         },
         name: "add",
         parameters: z.object({
           a: z.number(),
           b: z.number(),
         }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("handles UserError errors", async () => {
   await runWithTestServer({
@@ -406,30 +398,30 @@ test("handles UserError errors", async () => {
       ).toEqual({
         content: [{ text: "Something went wrong", type: "text" }],
         isError: true,
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Add two numbers",
         execute: async () => {
-          throw new UserError("Something went wrong");
+          throw new UserError("Something went wrong")
         },
         name: "add",
         parameters: z.object({
           a: z.number(),
           b: z.number(),
         }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("handles UserError errors with extras", async () => {
   await runWithTestServer({
@@ -444,7 +436,7 @@ test("handles UserError errors with extras", async () => {
         content: [{ text: "Something went wrong", type: "text" }],
         isError: true,
         structuredContent: { foo: "bar", num: 42 },
-      });
+      })
 
       // Should NOT include structuredContent if extras is not present
       expect(
@@ -455,36 +447,36 @@ test("handles UserError errors with extras", async () => {
       ).toEqual({
         content: [{ text: "Something went wrong", type: "text" }],
         isError: true,
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Throws UserError with extras",
         execute: async () => {
-          throw new UserError("Something went wrong", { foo: "bar", num: 42 });
+          throw new UserError("Something went wrong", { foo: "bar", num: 42 })
         },
         name: "add_with_extras",
         parameters: z.object({ a: z.number(), b: z.number() }),
-      });
+      })
 
       server.addTool({
         description: "Throws UserError without extras",
         execute: async () => {
-          throw new UserError("Something went wrong");
+          throw new UserError("Something went wrong")
         },
         name: "add_without_extras",
         parameters: z.object({ a: z.number(), b: z.number() }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("tool can throw McpError with InvalidParams error code", async () => {
   await runWithTestServer({
@@ -493,37 +485,37 @@ test("tool can throw McpError with InvalidParams error code", async () => {
         await client.callTool({
           arguments: { value: "invalid" },
           name: "validate",
-        });
-        throw new Error("Expected error to be thrown");
+        })
+        throw new Error("Expected error to be thrown")
       } catch (error) {
-        expect(error).toBeInstanceOf(McpError);
+        expect(error).toBeInstanceOf(McpError)
 
         // @ts-expect-error - we know that error is an McpError
-        expect(error.code).toBe(ErrorCode.InvalidParams);
+        expect(error.code).toBe(ErrorCode.InvalidParams)
 
         // @ts-expect-error - we know that error is an McpError
-        expect(error.message).toContain("Invalid value provided");
+        expect(error.message).toContain("Invalid value provided")
       }
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Validate input",
         execute: async () => {
-          throw new McpError(ErrorCode.InvalidParams, "Invalid value provided");
+          throw new McpError(ErrorCode.InvalidParams, "Invalid value provided")
         },
         name: "validate",
         parameters: z.object({ value: z.string() }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("tool can throw McpError with InternalError error code", async () => {
   await runWithTestServer({
@@ -532,40 +524,37 @@ test("tool can throw McpError with InternalError error code", async () => {
         await client.callTool({
           arguments: { value: "test" },
           name: "process",
-        });
-        throw new Error("Expected error to be thrown");
+        })
+        throw new Error("Expected error to be thrown")
       } catch (error) {
-        expect(error).toBeInstanceOf(McpError);
+        expect(error).toBeInstanceOf(McpError)
 
         // @ts-expect-error - we know that error is an McpError
-        expect(error.code).toBe(ErrorCode.InternalError);
+        expect(error.code).toBe(ErrorCode.InternalError)
 
         // @ts-expect-error - we know that error is an McpError
-        expect(error.message).toContain("Internal processing error");
+        expect(error.message).toContain("Internal processing error")
       }
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Process data",
         execute: async () => {
-          throw new McpError(
-            ErrorCode.InternalError,
-            "Internal processing error",
-          );
+          throw new McpError(ErrorCode.InternalError, "Internal processing error")
         },
         name: "process",
         parameters: z.object({ value: z.string() }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("tool can throw McpError with custom data", async () => {
   await runWithTestServer({
@@ -574,16 +563,16 @@ test("tool can throw McpError with custom data", async () => {
         await client.callTool({
           arguments: { id: "123" },
           name: "find",
-        });
-        throw new Error("Expected error to be thrown");
+        })
+        throw new Error("Expected error to be thrown")
       } catch (error) {
-        expect(error).toBeInstanceOf(McpError);
+        expect(error).toBeInstanceOf(McpError)
 
         // @ts-expect-error - we know that error is an McpError
-        expect(error.code).toBe(ErrorCode.InvalidRequest);
+        expect(error.code).toBe(ErrorCode.InvalidRequest)
 
         // @ts-expect-error - we know that error is an McpError
-        expect(error.message).toContain("Resource not found");
+        expect(error.message).toContain("Resource not found")
 
         // Note: Custom data may not be preserved through the MCP SDK transport layer
         // The important part is that the error code and message are correct
@@ -593,7 +582,7 @@ test("tool can throw McpError with custom data", async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Find resource",
@@ -601,16 +590,16 @@ test("tool can throw McpError with custom data", async () => {
           throw new McpError(ErrorCode.InvalidRequest, "Resource not found", {
             available: ["456", "789"],
             id: args.id,
-          });
+          })
         },
         name: "find",
         parameters: z.object({ id: z.string() }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("calling an unknown tool throws McpError with MethodNotFound code", async () => {
   await runWithTestServer({
@@ -622,29 +611,29 @@ test("calling an unknown tool throws McpError with MethodNotFound code", async (
             b: 2,
           },
           name: "add",
-        });
+        })
       } catch (error) {
-        expect(error).toBeInstanceOf(McpError);
+        expect(error).toBeInstanceOf(McpError)
 
         // @ts-expect-error - we know that error is an McpError
-        expect(error.code).toBe(ErrorCode.MethodNotFound);
+        expect(error.code).toBe(ErrorCode.MethodNotFound)
       }
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("tracks tool progress", async () => {
   await runWithTestServer({
     run: async ({ client }) => {
-      const onProgress = vi.fn();
+      const onProgress = vi.fn()
 
       await client.callTool(
         {
@@ -658,19 +647,19 @@ test("tracks tool progress", async () => {
         {
           onprogress: onProgress,
         },
-      );
+      )
 
-      expect(onProgress).toHaveBeenCalledTimes(1);
+      expect(onProgress).toHaveBeenCalledTimes(1)
       expect(onProgress).toHaveBeenCalledWith({
         progress: 0,
         total: 10,
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Add two numbers",
@@ -678,89 +667,89 @@ test("tracks tool progress", async () => {
           reportProgress({
             progress: 0,
             total: 10,
-          });
+          })
 
-          await delay(100);
+          await delay(100)
 
-          return String(args.a + args.b);
+          return String(args.a + args.b)
         },
         name: "add",
         parameters: z.object({
           a: z.number(),
           b: z.number(),
         }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("provides requestMetadata to tool context", async () => {
-  let capturedMetadata: Record<string, unknown> | undefined = undefined;
-  const metadata = { foo: "bar" };
+  let capturedMetadata: Record<string, unknown> | undefined = undefined
+  const metadata = { foo: "bar" }
 
   await runWithTestServer({
     run: async ({ client }) => {
       await client.callTool({
         _meta: metadata,
         name: "metadata-test",
-      });
+      })
 
-      expect(capturedMetadata).toBeDefined();
-      expect(capturedMetadata).toEqual(metadata);
+      expect(capturedMetadata).toBeDefined()
+      expect(capturedMetadata).toEqual(metadata)
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         execute: async (_args, context) => {
-          capturedMetadata = context.requestMetadata;
-          return "success";
+          capturedMetadata = context.requestMetadata
+          return "success"
         },
         name: "metadata-test",
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("allows tools to return _meta in CallToolResult", async () => {
-  const expectedMeta = { customField: "customValue", timestamp: 1234567890 };
+  const expectedMeta = { customField: "customValue", timestamp: 1234567890 }
 
   await runWithTestServer({
     run: async ({ client }) => {
       const result = await client.callTool({
         name: "meta-result-test",
-      });
+      })
 
-      expect(result._meta).toBeDefined();
-      expect(result._meta).toEqual(expectedMeta);
+      expect(result._meta).toBeDefined()
+      expect(result._meta).toEqual(expectedMeta)
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         execute: async () => {
           return {
             _meta: expectedMeta,
             content: [{ text: "success", type: "text" }],
-          };
+          }
         },
         name: "meta-result-test",
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test(
   "reports multiple progress updates without buffering",
@@ -772,11 +761,11 @@ test(
   async () => {
     await runWithTestServer({
       run: async ({ client }) => {
-        const progressCalls: Array<{ progress: number; total: number }> = [];
+        const progressCalls: Array<{ progress: number; total: number }> = []
 
         const onProgress = vi.fn((data) => {
-          progressCalls.push(data);
-        });
+          progressCalls.push(data)
+        })
 
         await client.callTool(
           {
@@ -789,72 +778,72 @@ test(
           {
             onprogress: onProgress,
           },
-        );
+        )
 
-        expect(onProgress).toHaveBeenCalledTimes(4);
+        expect(onProgress).toHaveBeenCalledTimes(4)
 
         expect(progressCalls).toEqual([
           { progress: 0, total: 100 },
           { progress: 50, total: 100 },
           { progress: 90, total: 100 },
           { progress: 100, total: 100 }, // This was previously lost due to buffering
-        ]);
+        ])
       },
       server: async () => {
         const server = new FastMCP({
           name: "Test",
           version: "1.0.0",
-        });
+        })
 
         server.addTool({
           description: "Test tool for progress buffering fix",
           execute: async (args, { reportProgress }) => {
-            const { steps } = args;
+            const { steps } = args
 
             // Initial
-            await reportProgress({ progress: 0, total: 100 });
+            await reportProgress({ progress: 0, total: 100 })
 
             for (let i = 1; i <= steps; i++) {
-              await delay(50); // Small delay to simulate work
+              await delay(50) // Small delay to simulate work
 
               if (i === 1) {
-                await reportProgress({ progress: 50, total: 100 });
+                await reportProgress({ progress: 50, total: 100 })
               } else if (i === 2) {
-                await reportProgress({ progress: 90, total: 100 });
+                await reportProgress({ progress: 90, total: 100 })
               }
             }
 
             // This was the critical test case that failed before the fix
             // because there's no await after it, causing it to be buffered
-            await reportProgress({ progress: 100, total: 100 });
+            await reportProgress({ progress: 100, total: 100 })
 
-            return "Progress test completed";
+            return "Progress test completed"
           },
           name: "progress-test",
           parameters: z.object({
             steps: z.number(),
           }),
-        });
+        })
 
-        return server;
+        return server
       },
-    });
+    })
   },
-);
+)
 
 test("sets logging levels", async () => {
   await runWithTestServer({
     run: async ({ client, session }) => {
-      await client.setLoggingLevel("debug");
+      await client.setLoggingLevel("debug")
 
-      expect(session.loggingLevel).toBe("debug");
+      expect(session.loggingLevel).toBe("debug")
 
-      await client.setLoggingLevel("info");
+      await client.setLoggingLevel("info")
 
-      expect(session.loggingLevel).toBe("info");
+      expect(session.loggingLevel).toBe("info")
     },
-  });
-});
+  })
+})
 
 test("handles tool timeout", async () => {
   await runWithTestServer({
@@ -866,34 +855,34 @@ test("handles tool timeout", async () => {
             b: 2,
           },
           name: "add",
-        });
-        throw new Error("Expected timeout error to be thrown");
+        })
+        throw new Error("Expected timeout error to be thrown")
       } catch (error) {
-        expect(error).toBeInstanceOf(McpError);
+        expect(error).toBeInstanceOf(McpError)
 
         // @ts-expect-error - we know that error is an McpError
-        expect(error.code).toBe(ErrorCode.InternalError);
+        expect(error.code).toBe(ErrorCode.InternalError)
 
         // @ts-expect-error - we know that error is an McpError
-        expect(error.message).toContain("timed out");
+        expect(error.message).toContain("timed out")
       }
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Add two numbers with potential timeout",
         execute: async (args) => {
-          console.log(`Adding ${args.a} and ${args.b}`);
+          console.log(`Adding ${args.a} and ${args.b}`)
 
           if (args.a > 1000 || args.b > 1000) {
-            await new Promise((resolve) => setTimeout(resolve, 3000));
+            await new Promise((resolve) => setTimeout(resolve, 3000))
           }
 
-          return String(args.a + args.b);
+          return String(args.a + args.b)
         },
         name: "add",
         parameters: z.object({
@@ -901,29 +890,26 @@ test("handles tool timeout", async () => {
           b: z.number(),
         }),
         timeoutMs: 1000,
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("sends logging messages to the client", async () => {
   await runWithTestServer({
     run: async ({ client }) => {
-      const onLog = vi.fn();
+      const onLog = vi.fn()
 
-      client.setNotificationHandler(
-        LoggingMessageNotificationSchema,
-        (message) => {
-          if (message.method === "notifications/message") {
-            onLog({
-              level: message.params.level,
-              ...(message.params.data ?? {}),
-            });
-          }
-        },
-      );
+      client.setNotificationHandler(LoggingMessageNotificationSchema, (message) => {
+        if (message.method === "notifications/message") {
+          onLog({
+            level: message.params.level,
+            ...(message.params.data ?? {}),
+          })
+        }
+      })
 
       await client.callTool({
         arguments: {
@@ -931,58 +917,58 @@ test("sends logging messages to the client", async () => {
           b: 2,
         },
         name: "add",
-      });
+      })
 
-      expect(onLog).toHaveBeenCalledTimes(4);
+      expect(onLog).toHaveBeenCalledTimes(4)
       expect(onLog).toHaveBeenNthCalledWith(1, {
         context: {
           foo: "bar",
         },
         level: "debug",
         message: "debug message",
-      });
+      })
       expect(onLog).toHaveBeenNthCalledWith(2, {
         level: "error",
         message: "error message",
-      });
+      })
       expect(onLog).toHaveBeenNthCalledWith(3, {
         level: "info",
         message: "info message",
-      });
+      })
       expect(onLog).toHaveBeenNthCalledWith(4, {
         level: "warning",
         message: "warn message",
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Add two numbers",
         execute: async (args, { log }) => {
           log.debug("debug message", {
             foo: "bar",
-          });
-          log.error("error message");
-          log.info("info message");
-          log.warn("warn message");
+          })
+          log.error("error message")
+          log.info("info message")
+          log.warn("warn message")
 
-          return String(args.a + args.b);
+          return String(args.a + args.b)
         },
         name: "add",
         parameters: z.object({
           a: z.number(),
           b: z.number(),
         }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("adds resources", async () => {
   await runWithTestServer({
@@ -995,29 +981,29 @@ test("adds resources", async () => {
             uri: "file:///logs/app.log",
           },
         ],
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addResource({
         async load() {
           return {
             text: "Example log content",
-          };
+          }
         },
         mimeType: "text/plain",
         name: "Application Logs",
         uri: "file:///logs/app.log",
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("clients reads a resource", async () => {
   await runWithTestServer({
@@ -1035,29 +1021,29 @@ test("clients reads a resource", async () => {
             uri: "file:///logs/app.log",
           },
         ],
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addResource({
         async load() {
           return {
             text: "Example log content",
-          };
+          }
         },
         mimeType: "text/plain",
         name: "Application Logs",
         uri: "file:///logs/app.log",
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("clients reads a resource that returns multiple resources", async () => {
   await runWithTestServer({
@@ -1081,13 +1067,13 @@ test("clients reads a resource that returns multiple resources", async () => {
             uri: "file:///logs/app.log",
           },
         ],
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addResource({
         async load() {
@@ -1098,17 +1084,17 @@ test("clients reads a resource that returns multiple resources", async () => {
             {
               text: "b",
             },
-          ];
+          ]
         },
         mimeType: "text/plain",
         name: "Application Logs",
         uri: "file:///logs/app.log",
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("embedded resources work in tools", async () => {
   await runWithTestServer({
@@ -1131,14 +1117,14 @@ test("embedded resources work in tools", async () => {
             type: "resource",
           },
         ],
-      });
+      })
     },
 
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addResourceTemplate({
         arguments: [
@@ -1150,12 +1136,12 @@ test("embedded resources work in tools", async () => {
         async load(args) {
           return {
             text: `{"id":"${args.userId}","name":"User","email":"user@example.com"}`,
-          };
+          }
         },
         mimeType: "application/json",
         name: "User Profile",
         uriTemplate: "user://profile/{userId}",
-      });
+      })
 
       server.addTool({
         description: "Get user profile data",
@@ -1163,24 +1149,22 @@ test("embedded resources work in tools", async () => {
           return {
             content: [
               {
-                resource: await server.embedded(
-                  `user://profile/${args.userId}`,
-                ),
+                resource: await server.embedded(`user://profile/${args.userId}`),
                 type: "resource",
               },
             ],
-          };
+          }
         },
         name: "get_user_profile",
         parameters: z.object({
           userId: z.string(),
         }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("embedded resources work with direct resources", async () => {
   await runWithTestServer({
@@ -1201,25 +1185,25 @@ test("embedded resources work with direct resources", async () => {
             type: "resource",
           },
         ],
-      });
+      })
     },
 
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addResource({
         async load() {
           return {
             text: "Example log content",
-          };
+          }
         },
         mimeType: "text/plain",
         name: "Application Logs",
         uri: "file:///logs/app.log",
-      });
+      })
 
       server.addTool({
         description: "Get application logs",
@@ -1231,16 +1215,16 @@ test("embedded resources work with direct resources", async () => {
                 type: "resource",
               },
             ],
-          };
+          }
         },
         name: "get_logs",
         parameters: z.object({}),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("embedded resources work with URI templates and query parameters", async () => {
   await runWithTestServer({
@@ -1264,7 +1248,7 @@ test("embedded resources work with URI templates and query parameters", async ()
             type: "resource",
           },
         ],
-      });
+      })
 
       // Test case 2: Query parameters with different order
       expect(
@@ -1285,7 +1269,7 @@ test("embedded resources work with URI templates and query parameters", async ()
             type: "resource",
           },
         ],
-      });
+      })
 
       // Test case 3: Query parameters with encoded values
       expect(
@@ -1306,14 +1290,14 @@ test("embedded resources work with URI templates and query parameters", async ()
             type: "resource",
           },
         ],
-      });
+      })
     },
 
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addResourceTemplate({
         arguments: [
@@ -1333,16 +1317,15 @@ test("embedded resources work with URI templates and query parameters", async ()
               query: args.q,
               type: "search",
             }),
-          };
+          }
         },
         mimeType: "application/json",
         name: "Search Resource",
         uriTemplate: "ui://search{?location,q}",
-      });
+      })
 
       server.addTool({
-        description:
-          "Get search resource data using embedded function with query parameters",
+        description: "Get search resource data using embedded function with query parameters",
         execute: async (args) => {
           return {
             content: [
@@ -1351,18 +1334,18 @@ test("embedded resources work with URI templates and query parameters", async ()
                 type: "resource",
               },
             ],
-          };
+          }
         },
         name: "get_search_resource",
         parameters: z.object({
           uri: z.string(),
         }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("embedded resources work with complex URI template patterns", async () => {
   await runWithTestServer({
@@ -1386,7 +1369,7 @@ test("embedded resources work with complex URI template patterns", async () => {
             type: "resource",
           },
         ],
-      });
+      })
 
       // Test case 2: Optional query parameters (some missing)
       expect(
@@ -1407,14 +1390,14 @@ test("embedded resources work with complex URI template patterns", async () => {
             type: "resource",
           },
         ],
-      });
+      })
     },
 
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addResourceTemplate({
         arguments: [
@@ -1434,25 +1417,24 @@ test("embedded resources work with complex URI template patterns", async () => {
         async load(args) {
           const result: Record<string, string> = {
             userId: args.userId,
-          };
+          }
           if (args.fields) {
-            result.fields = args.fields;
+            result.fields = args.fields
           }
           if (args.format) {
-            result.format = args.format;
+            result.format = args.format
           }
           return {
             text: JSON.stringify(result),
-          };
+          }
         },
         mimeType: "application/json",
         name: "User Data API",
         uriTemplate: "api://users/{userId}{?fields,format}",
-      });
+      })
 
       server.addTool({
-        description:
-          "Get user data using complex URI templates with path and query parameters",
+        description: "Get user data using complex URI templates with path and query parameters",
         execute: async (args) => {
           return {
             content: [
@@ -1461,18 +1443,18 @@ test("embedded resources work with complex URI template patterns", async () => {
                 type: "resource",
               },
             ],
-          };
+          }
         },
         name: "get_user_data",
         parameters: z.object({
           uri: z.string(),
         }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("adds prompts", async () => {
   await runWithTestServer({
@@ -1495,7 +1477,7 @@ test("adds prompts", async () => {
             role: "user",
           },
         ],
-      });
+      })
 
       expect(await client.listPrompts()).toEqual({
         prompts: [
@@ -1511,13 +1493,13 @@ test("adds prompts", async () => {
             name: "git-commit",
           },
         ],
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addPrompt({
         arguments: [
@@ -1529,36 +1511,36 @@ test("adds prompts", async () => {
         ],
         description: "Generate a Git commit message",
         load: async (args) => {
-          return `Generate a concise but descriptive commit message for these changes:\n\n${args.changes}`;
+          return `Generate a concise but descriptive commit message for these changes:\n\n${args.changes}`
         },
         name: "git-commit",
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("uses events to notify server of client connect/disconnect", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP({
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
-  const onConnect = vi.fn().mockResolvedValue(undefined);
-  const onDisconnect = vi.fn().mockResolvedValue(undefined);
+  const onConnect = vi.fn().mockResolvedValue(undefined)
+  const onDisconnect = vi.fn().mockResolvedValue(undefined)
 
-  server.on("connect", onConnect);
-  server.on("disconnect", onDisconnect);
+  server.on("connect", onConnect)
+  server.on("disconnect", onDisconnect)
 
   await server.start({
     httpStream: {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   const client = new Client(
     {
@@ -1568,45 +1550,43 @@ test("uses events to notify server of client connect/disconnect", async () => {
     {
       capabilities: {},
     },
-  );
+  )
 
-  const transport = new SSEClientTransport(
-    new URL(`http://localhost:${port}/sse`),
-  );
+  const transport = new SSEClientTransport(new URL(`http://localhost:${port}/sse`))
 
-  await client.connect(transport);
+  await client.connect(transport)
 
-  await delay(100);
+  await delay(100)
 
-  expect(onConnect).toHaveBeenCalledTimes(1);
-  expect(onDisconnect).toHaveBeenCalledTimes(0);
+  expect(onConnect).toHaveBeenCalledTimes(1)
+  expect(onDisconnect).toHaveBeenCalledTimes(0)
 
-  expect(server.sessions).toEqual([expect.any(FastMCPSession)]);
+  expect(server.sessions).toEqual([expect.any(FastMCPSession)])
 
-  await client.close();
+  await client.close()
 
-  await delay(100);
+  await delay(100)
 
-  expect(onConnect).toHaveBeenCalledTimes(1);
-  expect(onDisconnect).toHaveBeenCalledTimes(1);
+  expect(onConnect).toHaveBeenCalledTimes(1)
+  expect(onDisconnect).toHaveBeenCalledTimes(1)
 
-  await server.stop();
-});
+  await server.stop()
+})
 
 test("handles multiple clients", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP({
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   await server.start({
     httpStream: {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   const client1 = new Client(
     {
@@ -1616,13 +1596,11 @@ test("handles multiple clients", async () => {
     {
       capabilities: {},
     },
-  );
+  )
 
-  const transport1 = new SSEClientTransport(
-    new URL(`http://localhost:${port}/sse`),
-  );
+  const transport1 = new SSEClientTransport(new URL(`http://localhost:${port}/sse`))
 
-  await client1.connect(transport1);
+  await client1.connect(transport1)
 
   const client2 = new Client(
     {
@@ -1632,23 +1610,18 @@ test("handles multiple clients", async () => {
     {
       capabilities: {},
     },
-  );
+  )
 
-  const transport2 = new SSEClientTransport(
-    new URL(`http://localhost:${port}/sse`),
-  );
+  const transport2 = new SSEClientTransport(new URL(`http://localhost:${port}/sse`))
 
-  await client2.connect(transport2);
+  await client2.connect(transport2)
 
-  await delay(100);
+  await delay(100)
 
-  expect(server.sessions).toEqual([
-    expect.any(FastMCPSession),
-    expect.any(FastMCPSession),
-  ]);
+  expect(server.sessions).toEqual([expect.any(FastMCPSession), expect.any(FastMCPSession)])
 
-  await server.stop();
-});
+  await server.stop()
+})
 
 test("session knows about client capabilities", async () => {
   await runWithTestServer({
@@ -1665,7 +1638,7 @@ test("session knows about client capabilities", async () => {
             },
           },
         },
-      );
+      )
 
       client.setRequestHandler(ListRootsRequestSchema, () => {
         return {
@@ -1675,20 +1648,20 @@ test("session knows about client capabilities", async () => {
               uri: "file:///home/user/projects/frontend",
             },
           ],
-        };
-      });
+        }
+      })
 
-      return client;
+      return client
     },
     run: async ({ session }) => {
       expect(session.clientCapabilities).toEqual({
         roots: {
           listChanged: true,
         },
-      });
+      })
     },
-  });
-});
+  })
+})
 
 test("session knows about roots", async () => {
   await runWithTestServer({
@@ -1705,7 +1678,7 @@ test("session knows about roots", async () => {
             },
           },
         },
-      );
+      )
 
       client.setRequestHandler(ListRootsRequestSchema, () => {
         return {
@@ -1715,10 +1688,10 @@ test("session knows about roots", async () => {
               uri: "file:///home/user/projects/frontend",
             },
           ],
-        };
-      });
+        }
+      })
 
-      return client;
+      return client
     },
     run: async ({ session }) => {
       expect(session.roots).toEqual([
@@ -1726,10 +1699,10 @@ test("session knows about roots", async () => {
           name: "Frontend Repository",
           uri: "file:///home/user/projects/frontend",
         },
-      ]);
+      ])
     },
-  });
-});
+  })
+})
 
 test("session listens to roots changes", async () => {
   const clientRoots: Root[] = [
@@ -1737,7 +1710,7 @@ test("session listens to roots changes", async () => {
       name: "Frontend Repository",
       uri: "file:///home/user/projects/frontend",
     },
-  ];
+  ]
 
   await runWithTestServer({
     client: async () => {
@@ -1753,15 +1726,15 @@ test("session listens to roots changes", async () => {
             },
           },
         },
-      );
+      )
 
       client.setRequestHandler(ListRootsRequestSchema, () => {
         return {
           roots: clientRoots,
-        };
-      });
+        }
+      })
 
-      return client;
+      return client
     },
     run: async ({ client, session }) => {
       expect(session.roots).toEqual([
@@ -1769,20 +1742,20 @@ test("session listens to roots changes", async () => {
           name: "Frontend Repository",
           uri: "file:///home/user/projects/frontend",
         },
-      ]);
+      ])
 
       clientRoots.push({
         name: "Backend Repository",
         uri: "file:///home/user/projects/backend",
-      });
+      })
 
-      await client.sendRootsListChanged();
+      await client.sendRootsListChanged()
 
-      const onRootsChanged = vi.fn();
+      const onRootsChanged = vi.fn()
 
-      session.on("rootsChanged", onRootsChanged);
+      session.on("rootsChanged", onRootsChanged)
 
-      await delay(100);
+      await delay(100)
 
       expect(session.roots).toEqual([
         {
@@ -1793,9 +1766,9 @@ test("session listens to roots changes", async () => {
           name: "Backend Repository",
           uri: "file:///home/user/projects/backend",
         },
-      ]);
+      ])
 
-      expect(onRootsChanged).toHaveBeenCalledTimes(1);
+      expect(onRootsChanged).toHaveBeenCalledTimes(1)
       expect(onRootsChanged).toHaveBeenCalledWith({
         roots: [
           {
@@ -1807,22 +1780,22 @@ test("session listens to roots changes", async () => {
             uri: "file:///home/user/projects/backend",
           },
         ],
-      });
+      })
     },
-  });
-});
+  })
+})
 
 test("session sends pings to the client", async () => {
   await runWithTestServer({
     run: async ({ client }) => {
-      const onPing = vi.fn().mockReturnValue({});
+      const onPing = vi.fn().mockReturnValue({})
 
-      client.setRequestHandler(PingRequestSchema, onPing);
+      client.setRequestHandler(PingRequestSchema, onPing)
 
-      await delay(2000);
+      await delay(2000)
 
-      expect(onPing.mock.calls.length).toBeGreaterThanOrEqual(1);
-      expect(onPing.mock.calls.length).toBeLessThanOrEqual(3);
+      expect(onPing.mock.calls.length).toBeGreaterThanOrEqual(1)
+      expect(onPing.mock.calls.length).toBeLessThanOrEqual(3)
     },
     server: async () => {
       const server = new FastMCP({
@@ -1832,11 +1805,11 @@ test("session sends pings to the client", async () => {
           intervalMs: 1000,
         },
         version: "1.0.0",
-      });
-      return server;
+      })
+      return server
     },
-  });
-});
+  })
+})
 
 test("completes prompt arguments", async () => {
   await runWithTestServer({
@@ -1850,19 +1823,19 @@ test("completes prompt arguments", async () => {
           name: "countryPoem",
           type: "ref/prompt",
         },
-      });
+      })
 
       expect(response).toEqual({
         completion: {
           values: ["Germany"],
         },
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addPrompt({
         arguments: [
@@ -1871,12 +1844,12 @@ test("completes prompt arguments", async () => {
               if (value === "Germ") {
                 return {
                   values: ["Germany"],
-                };
+                }
               }
 
               return {
                 values: [],
-              };
+              }
             },
             description: "Name of the country",
             name: "name",
@@ -1885,15 +1858,15 @@ test("completes prompt arguments", async () => {
         ],
         description: "Writes a poem about a country",
         load: async ({ name }) => {
-          return `Hello, ${name}!`;
+          return `Hello, ${name}!`
         },
         name: "countryPoem",
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("adds automatic prompt argument completion when enum is provided", async () => {
   await runWithTestServer({
@@ -1907,20 +1880,20 @@ test("adds automatic prompt argument completion when enum is provided", async ()
           name: "countryPoem",
           type: "ref/prompt",
         },
-      });
+      })
 
       expect(response).toEqual({
         completion: {
           total: 1,
           values: ["Germany"],
         },
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addPrompt({
         arguments: [
@@ -1933,15 +1906,15 @@ test("adds automatic prompt argument completion when enum is provided", async ()
         ],
         description: "Writes a poem about a country",
         load: async ({ name }) => {
-          return `Hello, ${name}!`;
+          return `Hello, ${name}!`
         },
         name: "countryPoem",
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("completes template resource arguments", async () => {
   await runWithTestServer({
@@ -1955,19 +1928,19 @@ test("completes template resource arguments", async () => {
           type: "ref/resource",
           uri: "issue:///{issueId}",
         },
-      });
+      })
 
       expect(response).toEqual({
         completion: {
           values: ["123456"],
         },
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addResourceTemplate({
         arguments: [
@@ -1976,12 +1949,12 @@ test("completes template resource arguments", async () => {
               if (value === "123") {
                 return {
                   values: ["123456"],
-                };
+                }
               }
 
               return {
                 values: [],
-              };
+              }
             },
             description: "ID of the issue",
             name: "issueId",
@@ -1990,17 +1963,17 @@ test("completes template resource arguments", async () => {
         load: async ({ issueId }) => {
           return {
             text: `Issue ${issueId}`,
-          };
+          }
         },
         mimeType: "text/plain",
         name: "Issue",
         uriTemplate: "issue:///{issueId}",
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("lists resource templates", async () => {
   await runWithTestServer({
@@ -2013,13 +1986,13 @@ test("lists resource templates", async () => {
             uriTemplate: "file:///logs/{name}.log",
           },
         ],
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addResourceTemplate({
         arguments: [
@@ -2032,107 +2005,101 @@ test("lists resource templates", async () => {
         load: async ({ name }) => {
           return {
             text: `Example log content for ${name}`,
-          };
+          }
         },
         mimeType: "text/plain",
         name: "Application Logs",
         uriTemplate: "file:///logs/{name}.log",
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
-test(
-  "HTTP Stream: custom endpoint works with /another-mcp",
-  { timeout: 20000 },
-  async () => {
-    const port = await getRandomPort();
+test("HTTP Stream: custom endpoint works with /another-mcp", { timeout: 20000 }, async () => {
+  const port = await getRandomPort()
 
-    // Create server with custom endpoint
-    const server = new FastMCP({
-      name: "Test",
-      version: "1.0.0",
-    });
+  // Create server with custom endpoint
+  const server = new FastMCP({
+    name: "Test",
+    version: "1.0.0",
+  })
 
-    server.addTool({
-      description: "Add two numbers",
-      execute: async (args) => {
-        return String(args.a + args.b);
+  server.addTool({
+    description: "Add two numbers",
+    execute: async (args) => {
+      return String(args.a + args.b)
+    },
+    name: "add",
+    parameters: z.object({
+      a: z.number(),
+      b: z.number(),
+    }),
+  })
+
+  await server.start({
+    httpStream: {
+      endpoint: "/another-mcp",
+      port,
+    },
+    transportType: "httpStream",
+  })
+
+  try {
+    // Create client
+    const client = new Client(
+      {
+        name: "example-client",
+        version: "1.0.0",
+      },
+      {
+        capabilities: {},
+      },
+    )
+
+    const transport = new StreamableHTTPClientTransport(new URL(`http://localhost:${port}/another-mcp`))
+
+    // Connect client to server and wait for session to be ready
+    const sessionPromise = new Promise<FastMCPSession>((resolve) => {
+      server.on("connect", async (event) => {
+        await event.session.waitForReady()
+        resolve(event.session)
+      })
+    })
+
+    await client.connect(transport)
+    await sessionPromise
+
+    // Call tool
+    const result = await client.callTool({
+      arguments: {
+        a: 5,
+        b: 7,
       },
       name: "add",
-      parameters: z.object({
-        a: z.number(),
-        b: z.number(),
-      }),
-    });
+    })
 
-    await server.start({
-      httpStream: {
-        endpoint: "/another-mcp",
-        port,
-      },
-      transportType: "httpStream",
-    });
+    // Check result
+    expect(result).toEqual({
+      content: [{ text: "12", type: "text" }],
+    })
 
-    try {
-      // Create client
-      const client = new Client(
-        {
-          name: "example-client",
-          version: "1.0.0",
-        },
-        {
-          capabilities: {},
-        },
-      );
-
-      const transport = new StreamableHTTPClientTransport(
-        new URL(`http://localhost:${port}/another-mcp`),
-      );
-
-      // Connect client to server and wait for session to be ready
-      const sessionPromise = new Promise<FastMCPSession>((resolve) => {
-        server.on("connect", async (event) => {
-          await event.session.waitForReady();
-          resolve(event.session);
-        });
-      });
-
-      await client.connect(transport);
-      await sessionPromise;
-
-      // Call tool
-      const result = await client.callTool({
-        arguments: {
-          a: 5,
-          b: 7,
-        },
-        name: "add",
-      });
-
-      // Check result
-      expect(result).toEqual({
-        content: [{ text: "12", type: "text" }],
-      });
-
-      // Clean up connection
-      await transport.terminateSession();
-      await client.close();
-    } finally {
-      await server.stop();
-    }
-  },
-);
+    // Clean up connection
+    await transport.terminateSession()
+    await client.close()
+  } finally {
+    await server.stop()
+  }
+})
 
 test("clients reads a resource accessed via a resource template", async () => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const loadSpy = vi.fn((_args) => {
     return {
       text: "Example log content",
-    };
-  });
+    }
+  })
 
   await runWithTestServer({
     run: async ({ client }) => {
@@ -2149,17 +2116,17 @@ test("clients reads a resource accessed via a resource template", async () => {
             uri: "file:///logs/app.log",
           },
         ],
-      });
+      })
 
       expect(loadSpy).toHaveBeenCalledWith({
         name: "app",
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addResourceTemplate({
         arguments: [
@@ -2169,17 +2136,17 @@ test("clients reads a resource accessed via a resource template", async () => {
           },
         ],
         async load(args) {
-          return loadSpy(args);
+          return loadSpy(args)
         },
         mimeType: "text/plain",
         name: "Application Logs",
         uriTemplate: "file:///logs/{name}.log",
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("makes a sampling request", async () => {
   const onMessageRequest = vi.fn(() => {
@@ -2190,8 +2157,8 @@ test("makes a sampling request", async () => {
       },
       model: "gpt-3.5-turbo",
       role: "assistant",
-    };
-  });
+    }
+  })
 
   await runWithTestServer({
     client: async () => {
@@ -2205,11 +2172,11 @@ test("makes a sampling request", async () => {
             sampling: {},
           },
         },
-      );
-      return client;
+      )
+      return client
     },
     run: async ({ client, session }) => {
-      client.setRequestHandler(CreateMessageRequestSchema, onMessageRequest);
+      client.setRequestHandler(CreateMessageRequestSchema, onMessageRequest)
 
       const response = await session.requestSampling({
         includeContext: "thisServer",
@@ -2224,7 +2191,7 @@ test("makes a sampling request", async () => {
           },
         ],
         systemPrompt: "You are a helpful file system assistant.",
-      });
+      })
 
       expect(response).toEqual({
         content: {
@@ -2233,12 +2200,12 @@ test("makes a sampling request", async () => {
         },
         model: "gpt-3.5-turbo",
         role: "assistant",
-      });
+      })
 
-      expect(onMessageRequest).toHaveBeenCalledTimes(1);
+      expect(onMessageRequest).toHaveBeenCalledTimes(1)
     },
-  });
-});
+  })
+})
 
 test("throws ErrorCode.InvalidParams if tool parameters do not match zod schema", async () => {
   await runWithTestServer({
@@ -2250,41 +2217,41 @@ test("throws ErrorCode.InvalidParams if tool parameters do not match zod schema"
             b: "invalid",
           },
           name: "add",
-        });
+        })
       } catch (error) {
-        expect(error).toBeInstanceOf(McpError);
+        expect(error).toBeInstanceOf(McpError)
 
         // @ts-expect-error - we know that error is an McpError
-        expect(error.code).toBe(ErrorCode.InvalidParams);
+        expect(error.code).toBe(ErrorCode.InvalidParams)
 
         // @ts-expect-error - we know that error is an McpError
         expect(error.message).toBe(
           "MCP error -32602: MCP error -32602: Tool 'add' parameter validation failed: b: Expected number, received string. Please check the parameter types and values according to the tool's schema.",
-        );
+        )
       }
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Add two numbers",
         execute: async (args) => {
-          return String(args.a + args.b);
+          return String(args.a + args.b)
         },
         name: "add",
         parameters: z.object({
           a: z.number(),
           b: z.number(),
         }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("server remains usable after InvalidParams error", async () => {
   await runWithTestServer({
@@ -2296,17 +2263,17 @@ test("server remains usable after InvalidParams error", async () => {
             b: "invalid",
           },
           name: "add",
-        });
+        })
       } catch (error) {
-        expect(error).toBeInstanceOf(McpError);
+        expect(error).toBeInstanceOf(McpError)
 
         // @ts-expect-error - we know that error is an McpError
-        expect(error.code).toBe(ErrorCode.InvalidParams);
+        expect(error.code).toBe(ErrorCode.InvalidParams)
 
         // @ts-expect-error - we know that error is an McpError
         expect(error.message).toBe(
           "MCP error -32602: MCP error -32602: Tool 'add' parameter validation failed: b: Expected number, received string. Please check the parameter types and values according to the tool's schema.",
-        );
+        )
       }
 
       expect(
@@ -2319,57 +2286,57 @@ test("server remains usable after InvalidParams error", async () => {
         }),
       ).toEqual({
         content: [{ text: "3", type: "text" }],
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Add two numbers",
         execute: async (args) => {
-          return String(args.a + args.b);
+          return String(args.a + args.b)
         },
         name: "add",
         parameters: z.object({
           a: z.number(),
           b: z.number(),
         }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("allows new clients to connect after a client disconnects", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP({
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Add two numbers",
     execute: async (args) => {
-      return String(args.a + args.b);
+      return String(args.a + args.b)
     },
     name: "add",
     parameters: z.object({
       a: z.number(),
       b: z.number(),
     }),
-  });
+  })
 
   await server.start({
     httpStream: {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   const client1 = new Client(
     {
@@ -2379,13 +2346,11 @@ test("allows new clients to connect after a client disconnects", async () => {
     {
       capabilities: {},
     },
-  );
+  )
 
-  const transport1 = new SSEClientTransport(
-    new URL(`http://localhost:${port}/sse`),
-  );
+  const transport1 = new SSEClientTransport(new URL(`http://localhost:${port}/sse`))
 
-  await client1.connect(transport1);
+  await client1.connect(transport1)
 
   expect(
     await client1.callTool({
@@ -2397,9 +2362,9 @@ test("allows new clients to connect after a client disconnects", async () => {
     }),
   ).toEqual({
     content: [{ text: "3", type: "text" }],
-  });
+  })
 
-  await client1.close();
+  await client1.close()
 
   const client2 = new Client(
     {
@@ -2409,13 +2374,11 @@ test("allows new clients to connect after a client disconnects", async () => {
     {
       capabilities: {},
     },
-  );
+  )
 
-  const transport2 = new SSEClientTransport(
-    new URL(`http://localhost:${port}/sse`),
-  );
+  const transport2 = new SSEClientTransport(new URL(`http://localhost:${port}/sse`))
 
-  await client2.connect(transport2);
+  await client2.connect(transport2)
 
   expect(
     await client2.callTool({
@@ -2427,52 +2390,52 @@ test("allows new clients to connect after a client disconnects", async () => {
     }),
   ).toEqual({
     content: [{ text: "3", type: "text" }],
-  });
+  })
 
-  await client2.close();
+  await client2.close()
 
-  await server.stop();
-});
+  await server.stop()
+})
 
 test("able to close server immediately after starting it", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP({
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   await server.start({
     httpStream: {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   // We were previously not waiting for the server to start.
   // Therefore, this would have caused error 'Server is not running.'.
-  await server.stop();
-});
+  await server.stop()
+})
 
 test("closing event source does not produce error", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP({
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Add two numbers",
     execute: async (args) => {
-      return String(args.a + args.b);
+      return String(args.a + args.b)
     },
     name: "add",
     parameters: z.object({
       a: z.number(),
       b: z.number(),
     }),
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -2480,52 +2443,52 @@ test("closing event source does not produce error", async () => {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   const eventSource = await new Promise<EventSourceClient>((onMessage) => {
     const eventSource = createEventSource({
       onConnect: () => {
-        console.info("connected");
+        console.info("connected")
       },
       onDisconnect: () => {
-        console.info("disconnected");
+        console.info("disconnected")
       },
       onMessage: () => {
-        onMessage(eventSource);
+        onMessage(eventSource)
       },
       url: `http://127.0.0.1:${port}/sse`,
-    });
-  });
+    })
+  })
 
-  expect(eventSource.readyState).toBe("open");
+  expect(eventSource.readyState).toBe("open")
 
-  eventSource.close();
+  eventSource.close()
 
   // We were getting unhandled error 'Not connected'
   // https://github.com/punkpeye/mcp-proxy/commit/62cf27d5e3dfcbc353e8d03c7714a62c37177b52
-  await delay(1000);
+  await delay(1000)
 
-  await server.stop();
-});
+  await server.stop()
+})
 
 test("provides auth to tools", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const authenticate = vi.fn(async () => {
     return {
       id: 1,
-    };
-  });
+    }
+  })
 
   const server = new FastMCP<{ id: number }>({
     authenticate,
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   const execute = vi.fn(async (args) => {
-    return String(args.a + args.b);
-  });
+    return String(args.a + args.b)
+  })
 
   server.addTool({
     description: "Add two numbers",
@@ -2535,14 +2498,14 @@ test("provides auth to tools", async () => {
       a: z.number(),
       b: z.number(),
     }),
-  });
+  })
 
   await server.start({
     httpStream: {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   const client = new Client(
     {
@@ -2552,31 +2515,25 @@ test("provides auth to tools", async () => {
     {
       capabilities: {},
     },
-  );
+  )
 
-  const transport = new SSEClientTransport(
-    new URL(`http://localhost:${port}/sse`),
-    {
-      eventSourceInit: {
-        fetch: async (url, init) => {
-          return fetch(url, {
-            ...init,
-            headers: {
-              ...init?.headers,
-              "x-api-key": "123",
-            },
-          });
-        },
+  const transport = new SSEClientTransport(new URL(`http://localhost:${port}/sse`), {
+    eventSourceInit: {
+      fetch: async (url, init) => {
+        return fetch(url, {
+          ...init,
+          headers: {
+            ...init?.headers,
+            "x-api-key": "123",
+          },
+        })
       },
     },
-  );
+  })
 
-  await client.connect(transport);
+  await client.connect(transport)
 
-  expect(
-    authenticate,
-    "authenticate should have been called",
-  ).toHaveBeenCalledTimes(1);
+  expect(authenticate, "authenticate should have been called").toHaveBeenCalledTimes(1)
 
   expect(
     await client.callTool({
@@ -2588,9 +2545,9 @@ test("provides auth to tools", async () => {
     }),
   ).toEqual({
     content: [{ text: "3", type: "text" }],
-  });
+  })
 
-  expect(execute, "execute should have been called").toHaveBeenCalledTimes(1);
+  expect(execute, "execute should have been called").toHaveBeenCalledTimes(1)
 
   expect(execute).toHaveBeenCalledWith(
     {
@@ -2611,44 +2568,44 @@ test("provides auth to tools", async () => {
       sessionId: expect.any(String),
       streamContent: expect.any(Function),
     },
-  );
-});
+  )
+})
 
 test("provides auth to resources", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const authenticate = vi.fn(async () => {
     return {
       role: "admin",
       userId: 42,
-    };
-  });
+    }
+  })
 
   const server = new FastMCP<{ role: string; userId: number }>({
     authenticate,
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   const resourceLoad = vi.fn(async (auth) => {
     return {
       text: `User ${auth?.userId} with role ${auth?.role} loaded this resource`,
-    };
-  });
+    }
+  })
 
   server.addResource({
     load: resourceLoad,
     mimeType: "text/plain",
     name: "Auth Resource",
     uri: "auth://resource",
-  });
+  })
 
   await server.start({
     httpStream: {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   const client = new Client(
     {
@@ -2658,36 +2615,33 @@ test("provides auth to resources", async () => {
     {
       capabilities: {},
     },
-  );
+  )
 
-  const transport = new SSEClientTransport(
-    new URL(`http://localhost:${port}/sse`),
-    {
-      eventSourceInit: {
-        fetch: async (url, init) => {
-          return fetch(url, {
-            ...init,
-            headers: {
-              ...init?.headers,
-              "x-api-key": "123",
-            },
-          });
-        },
+  const transport = new SSEClientTransport(new URL(`http://localhost:${port}/sse`), {
+    eventSourceInit: {
+      fetch: async (url, init) => {
+        return fetch(url, {
+          ...init,
+          headers: {
+            ...init?.headers,
+            "x-api-key": "123",
+          },
+        })
       },
     },
-  );
+  })
 
-  await client.connect(transport);
+  await client.connect(transport)
 
   const result = await client.readResource({
     uri: "auth://resource",
-  });
+  })
 
-  expect(resourceLoad).toHaveBeenCalledTimes(1);
+  expect(resourceLoad).toHaveBeenCalledTimes(1)
   expect(resourceLoad).toHaveBeenCalledWith({
     role: "admin",
     userId: 42,
-  });
+  })
 
   expect(result).toEqual({
     contents: [
@@ -2698,30 +2652,30 @@ test("provides auth to resources", async () => {
         uri: "auth://resource",
       },
     ],
-  });
-});
+  })
+})
 
 test("provides auth to resource templates", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const authenticate = vi.fn(async () => {
     return {
       permissions: ["read", "write"],
       userId: 99,
-    };
-  });
+    }
+  })
 
   const server = new FastMCP<{ permissions: string[]; userId: number }>({
     authenticate,
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   const templateLoad = vi.fn(async (args, auth) => {
     return {
       text: `Resource ${args.resourceId} accessed by user ${auth?.userId} with permissions: ${auth?.permissions?.join(", ")}`,
-    };
-  });
+    }
+  })
 
   server.addResourceTemplate({
     arguments: [
@@ -2734,14 +2688,14 @@ test("provides auth to resource templates", async () => {
     mimeType: "text/plain",
     name: "Auth Template",
     uriTemplate: "auth://template/{resourceId}",
-  });
+  })
 
   await server.start({
     httpStream: {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   const client = new Client(
     {
@@ -2751,36 +2705,33 @@ test("provides auth to resource templates", async () => {
     {
       capabilities: {},
     },
-  );
+  )
 
-  const transport = new SSEClientTransport(
-    new URL(`http://localhost:${port}/sse`),
-    {
-      eventSourceInit: {
-        fetch: async (url, init) => {
-          return fetch(url, {
-            ...init,
-            headers: {
-              ...init?.headers,
-              "x-api-key": "123",
-            },
-          });
-        },
+  const transport = new SSEClientTransport(new URL(`http://localhost:${port}/sse`), {
+    eventSourceInit: {
+      fetch: async (url, init) => {
+        return fetch(url, {
+          ...init,
+          headers: {
+            ...init?.headers,
+            "x-api-key": "123",
+          },
+        })
       },
     },
-  );
+  })
 
-  await client.connect(transport);
+  await client.connect(transport)
 
   const result = await client.readResource({
     uri: "auth://template/resource-123",
-  });
+  })
 
-  expect(templateLoad).toHaveBeenCalledTimes(1);
+  expect(templateLoad).toHaveBeenCalledTimes(1)
   expect(templateLoad).toHaveBeenCalledWith(
     { resourceId: "resource-123" },
     { permissions: ["read", "write"], userId: 99 },
-  );
+  )
 
   expect(result).toEqual({
     contents: [
@@ -2791,24 +2742,24 @@ test("provides auth to resource templates", async () => {
         uri: "auth://template/resource-123",
       },
     ],
-  });
-});
+  })
+})
 
 test("provides auth to resource templates returning arrays", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const authenticate = vi.fn(async () => {
     return {
       accessLevel: 3,
       teamId: "team-alpha",
-    };
-  });
+    }
+  })
 
   const server = new FastMCP<{ accessLevel: number; teamId: string }>({
     authenticate,
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   const templateLoad = vi.fn(async (args, auth) => {
     return [
@@ -2818,8 +2769,8 @@ test("provides auth to resource templates returning arrays", async () => {
       {
         text: `Document 2 for ${args.category} - Access Level: ${auth?.accessLevel}`,
       },
-    ];
-  });
+    ]
+  })
 
   server.addResourceTemplate({
     arguments: [
@@ -2832,14 +2783,14 @@ test("provides auth to resource templates returning arrays", async () => {
     mimeType: "text/plain",
     name: "Multi Doc Template",
     uriTemplate: "docs://category/{category}",
-  });
+  })
 
   await server.start({
     httpStream: {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   const client = new Client(
     {
@@ -2849,36 +2800,30 @@ test("provides auth to resource templates returning arrays", async () => {
     {
       capabilities: {},
     },
-  );
+  )
 
-  const transport = new SSEClientTransport(
-    new URL(`http://localhost:${port}/sse`),
-    {
-      eventSourceInit: {
-        fetch: async (url, init) => {
-          return fetch(url, {
-            ...init,
-            headers: {
-              ...init?.headers,
-              "x-api-key": "123",
-            },
-          });
-        },
+  const transport = new SSEClientTransport(new URL(`http://localhost:${port}/sse`), {
+    eventSourceInit: {
+      fetch: async (url, init) => {
+        return fetch(url, {
+          ...init,
+          headers: {
+            ...init?.headers,
+            "x-api-key": "123",
+          },
+        })
       },
     },
-  );
+  })
 
-  await client.connect(transport);
+  await client.connect(transport)
 
   const result = await client.readResource({
     uri: "docs://category/reports",
-  });
+  })
 
-  expect(templateLoad).toHaveBeenCalledTimes(1);
-  expect(templateLoad).toHaveBeenCalledWith(
-    { category: "reports" },
-    { accessLevel: 3, teamId: "team-alpha" },
-  );
+  expect(templateLoad).toHaveBeenCalledTimes(1)
+  expect(templateLoad).toHaveBeenCalledWith({ category: "reports" }, { accessLevel: 3, teamId: "team-alpha" })
 
   expect(result).toEqual({
     contents: [
@@ -2895,33 +2840,30 @@ test("provides auth to resource templates returning arrays", async () => {
         uri: "docs://category/reports",
       },
     ],
-  });
-});
+  })
+})
 
 test("provides auth to prompt argument completion", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const authenticate = vi.fn(async () => {
     return {
       department: "engineering",
       userId: 100,
-    };
-  });
+    }
+  })
 
   const server = new FastMCP<{ department: string; userId: number }>({
     authenticate,
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   const promptCompleter = vi.fn(async (value: string, auth) => {
     return {
-      values: [
-        `${value}_user${auth?.userId}`,
-        `${value}_dept${auth?.department}`,
-      ],
-    };
-  });
+      values: [`${value}_user${auth?.userId}`, `${value}_dept${auth?.department}`],
+    }
+  })
 
   server.addPrompt({
     arguments: [
@@ -2933,17 +2875,17 @@ test("provides auth to prompt argument completion", async () => {
       },
     ],
     async load(args) {
-      return `Loading project: ${args.project}`;
+      return `Loading project: ${args.project}`
     },
     name: "load-project",
-  });
+  })
 
   await server.start({
     httpStream: {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   const client = new Client(
     {
@@ -2953,26 +2895,23 @@ test("provides auth to prompt argument completion", async () => {
     {
       capabilities: {},
     },
-  );
+  )
 
-  const transport = new SSEClientTransport(
-    new URL(`http://localhost:${port}/sse`),
-    {
-      eventSourceInit: {
-        fetch: async (url, init) => {
-          return fetch(url, {
-            ...init,
-            headers: {
-              ...init?.headers,
-              "x-api-key": "123",
-            },
-          });
-        },
+  const transport = new SSEClientTransport(new URL(`http://localhost:${port}/sse`), {
+    eventSourceInit: {
+      fetch: async (url, init) => {
+        return fetch(url, {
+          ...init,
+          headers: {
+            ...init?.headers,
+            "x-api-key": "123",
+          },
+        })
       },
     },
-  );
+  })
 
-  await client.connect(transport);
+  await client.connect(transport)
 
   const completionResult = await client.complete({
     argument: {
@@ -2983,40 +2922,40 @@ test("provides auth to prompt argument completion", async () => {
       name: "load-project",
       type: "ref/prompt",
     },
-  });
+  })
 
-  expect(promptCompleter).toHaveBeenCalledTimes(1);
+  expect(promptCompleter).toHaveBeenCalledTimes(1)
   expect(promptCompleter).toHaveBeenCalledWith("test", {
     department: "engineering",
     userId: 100,
-  });
+  })
 
   expect(completionResult).toEqual({
     completion: {
       values: ["test_user100", "test_deptengineering"],
     },
-  });
-});
+  })
+})
 
 test("provides auth to prompt load function", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const authenticate = vi.fn(async () => {
     return {
       level: "admin",
       username: "testuser",
-    };
-  });
+    }
+  })
 
   const server = new FastMCP<{ level: string; username: string }>({
     authenticate,
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   const promptLoad = vi.fn(async (args, auth) => {
-    return `Welcome ${auth?.username} (${auth?.level}): You selected ${args.option}`;
-  });
+    return `Welcome ${auth?.username} (${auth?.level}): You selected ${args.option}`
+  })
 
   server.addPrompt({
     arguments: [
@@ -3028,14 +2967,14 @@ test("provides auth to prompt load function", async () => {
     ],
     load: promptLoad,
     name: "auth-prompt",
-  });
+  })
 
   await server.start({
     httpStream: {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   const client = new Client(
     {
@@ -3045,37 +2984,31 @@ test("provides auth to prompt load function", async () => {
     {
       capabilities: {},
     },
-  );
+  )
 
-  const transport = new SSEClientTransport(
-    new URL(`http://localhost:${port}/sse`),
-    {
-      eventSourceInit: {
-        fetch: async (url, init) => {
-          return fetch(url, {
-            ...init,
-            headers: {
-              ...init?.headers,
-              "x-api-key": "123",
-            },
-          });
-        },
+  const transport = new SSEClientTransport(new URL(`http://localhost:${port}/sse`), {
+    eventSourceInit: {
+      fetch: async (url, init) => {
+        return fetch(url, {
+          ...init,
+          headers: {
+            ...init?.headers,
+            "x-api-key": "123",
+          },
+        })
       },
     },
-  );
+  })
 
-  await client.connect(transport);
+  await client.connect(transport)
 
   const result = await client.getPrompt({
     arguments: { option: "dashboard" },
     name: "auth-prompt",
-  });
+  })
 
-  expect(promptLoad).toHaveBeenCalledTimes(1);
-  expect(promptLoad).toHaveBeenCalledWith(
-    { option: "dashboard" },
-    { level: "admin", username: "testuser" },
-  );
+  expect(promptLoad).toHaveBeenCalledTimes(1)
+  expect(promptLoad).toHaveBeenCalledWith({ option: "dashboard" }, { level: "admin", username: "testuser" })
 
   expect(result).toEqual({
     messages: [
@@ -3087,30 +3020,30 @@ test("provides auth to prompt load function", async () => {
         role: "user",
       },
     ],
-  });
-});
+  })
+})
 
 test("provides auth to resource template argument completion", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const authenticate = vi.fn(async () => {
     return {
       region: "us-west",
       teamId: "alpha",
-    };
-  });
+    }
+  })
 
   const server = new FastMCP<{ region: string; teamId: string }>({
     authenticate,
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   const resourceCompleter = vi.fn(async (value: string, auth) => {
     return {
       values: [`${value}_${auth?.region}`, `${value}_team_${auth?.teamId}`],
-    };
-  });
+    }
+  })
 
   server.addResourceTemplate({
     arguments: [
@@ -3124,19 +3057,19 @@ test("provides auth to resource template argument completion", async () => {
     async load(args) {
       return {
         text: `Service ${args.serviceId} data`,
-      };
+      }
     },
     mimeType: "text/plain",
     name: "Service Resource",
     uriTemplate: "service://{serviceId}",
-  });
+  })
 
   await server.start({
     httpStream: {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   const client = new Client(
     {
@@ -3146,26 +3079,23 @@ test("provides auth to resource template argument completion", async () => {
     {
       capabilities: {},
     },
-  );
+  )
 
-  const transport = new SSEClientTransport(
-    new URL(`http://localhost:${port}/sse`),
-    {
-      eventSourceInit: {
-        fetch: async (url, init) => {
-          return fetch(url, {
-            ...init,
-            headers: {
-              ...init?.headers,
-              "x-api-key": "123",
-            },
-          });
-        },
+  const transport = new SSEClientTransport(new URL(`http://localhost:${port}/sse`), {
+    eventSourceInit: {
+      fetch: async (url, init) => {
+        return fetch(url, {
+          ...init,
+          headers: {
+            ...init?.headers,
+            "x-api-key": "123",
+          },
+        })
       },
     },
-  );
+  })
 
-  await client.connect(transport);
+  await client.connect(transport)
 
   const completionResult = await client.complete({
     argument: {
@@ -3176,49 +3106,49 @@ test("provides auth to resource template argument completion", async () => {
       type: "ref/resource",
       uri: "service://{serviceId}",
     },
-  });
+  })
 
-  expect(resourceCompleter).toHaveBeenCalledTimes(1);
+  expect(resourceCompleter).toHaveBeenCalledTimes(1)
   expect(resourceCompleter).toHaveBeenCalledWith("api", {
     region: "us-west",
     teamId: "alpha",
-  });
+  })
 
   expect(completionResult).toEqual({
     completion: {
       values: ["api_us-west", "api_team_alpha"],
     },
-  });
-});
+  })
+})
 
 test("supports streaming output from tools", async () => {
-  let streamResult: { content: Array<{ text: string; type: string }> };
+  let streamResult: { content: Array<{ text: string; type: string }> }
 
   await runWithTestServer({
     run: async ({ client }) => {
       const result = await client.callTool({
         arguments: {},
         name: "streaming-void-tool",
-      });
+      })
 
       expect(result).toEqual({
         content: [],
-      });
+      })
 
       streamResult = (await client.callTool({
         arguments: {},
         name: "streaming-with-result",
-      })) as { content: Array<{ text: string; type: string }> };
+      })) as { content: Array<{ text: string; type: string }> }
 
       expect(streamResult).toEqual({
         content: [{ text: "Final result after streaming", type: "text" }],
-      });
+      })
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         annotations: {
@@ -3229,19 +3159,19 @@ test("supports streaming output from tools", async () => {
           await context.streamContent({
             text: "Streaming content 1",
             type: "text",
-          });
+          })
 
           await context.streamContent({
             text: "Streaming content 2",
             type: "text",
-          });
+          })
 
           // Return void
-          return;
+          return
         },
         name: "streaming-void-tool",
         parameters: z.object({}),
-      });
+      })
 
       server.addTool({
         annotations: {
@@ -3252,44 +3182,44 @@ test("supports streaming output from tools", async () => {
           await context.streamContent({
             text: "Streaming content 1",
             type: "text",
-          });
+          })
 
           await context.streamContent({
             text: "Streaming content 2",
             type: "text",
-          });
+          })
 
-          return "Final result after streaming";
+          return "Final result after streaming"
         },
         name: "streaming-with-result",
         parameters: z.object({}),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("blocks unauthorized requests", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP<{ id: number }>({
     authenticate: async () => {
       throw new Response(null, {
         status: 401,
         statusText: "Unauthorized",
-      });
+      })
     },
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   await server.start({
     httpStream: {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   const client = new Client(
     {
@@ -3299,202 +3229,175 @@ test("blocks unauthorized requests", async () => {
     {
       capabilities: {},
     },
-  );
+  )
 
-  const transport = new SSEClientTransport(
-    new URL(`http://localhost:${port}/sse`),
-  );
+  const transport = new SSEClientTransport(new URL(`http://localhost:${port}/sse`))
 
   expect(async () => {
-    await client.connect(transport);
-  }).rejects.toThrow("SSE error: Non-200 status code (401)");
-});
+    await client.connect(transport)
+  }).rejects.toThrow("SSE error: Non-200 status code (401)")
+})
 
 test("filters tools based on canAccess property", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP<{ role: string }>({
     authenticate: async (request) => {
-      const role = request.headers["x-role"] as string;
-      return { role: role || "user" };
+      const role = request.headers["x-role"] as string
+      return { role: role || "user" }
     },
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     canAccess: (auth) => auth?.role === "admin",
     description: "Admin only",
     execute: async () => "admin",
     name: "admin-tool",
-  });
+  })
 
   server.addTool({
     description: "Available to all",
     execute: async () => "public",
     name: "public-tool",
-  });
+  })
 
-  await server.start({ httpStream: { port }, transportType: "httpStream" });
+  await server.start({ httpStream: { port }, transportType: "httpStream" })
 
   try {
     // Admin gets both tools
-    const adminClient = new Client(
-      { name: "admin", version: "1.0.0" },
-      { capabilities: {} },
-    );
-    const adminTransport = new SSEClientTransport(
-      new URL(`http://localhost:${port}/sse`),
-      {
-        eventSourceInit: {
-          fetch: (url, init) =>
-            fetch(url, {
-              ...init,
-              headers: { ...init?.headers, "x-role": "admin" },
-            }),
-        },
+    const adminClient = new Client({ name: "admin", version: "1.0.0" }, { capabilities: {} })
+    const adminTransport = new SSEClientTransport(new URL(`http://localhost:${port}/sse`), {
+      eventSourceInit: {
+        fetch: (url, init) =>
+          fetch(url, {
+            ...init,
+            headers: { ...init?.headers, "x-role": "admin" },
+          }),
       },
-    );
-    await adminClient.connect(adminTransport);
+    })
+    await adminClient.connect(adminTransport)
 
-    const adminTools = await adminClient.listTools();
-    expect(adminTools.tools.map((t) => t.name).sort()).toEqual([
-      "admin-tool",
-      "public-tool",
-    ]);
+    const adminTools = await adminClient.listTools()
+    expect(adminTools.tools.map((t) => t.name).sort()).toEqual(["admin-tool", "public-tool"])
 
     // User gets only public tool
-    const userClient = new Client(
-      { name: "user", version: "1.0.0" },
-      { capabilities: {} },
-    );
-    const userTransport = new SSEClientTransport(
-      new URL(`http://localhost:${port}/sse`),
-      {
-        eventSourceInit: {
-          fetch: (url, init) =>
-            fetch(url, {
-              ...init,
-              headers: { ...init?.headers, "x-role": "user" },
-            }),
-        },
+    const userClient = new Client({ name: "user", version: "1.0.0" }, { capabilities: {} })
+    const userTransport = new SSEClientTransport(new URL(`http://localhost:${port}/sse`), {
+      eventSourceInit: {
+        fetch: (url, init) =>
+          fetch(url, {
+            ...init,
+            headers: { ...init?.headers, "x-role": "user" },
+          }),
       },
-    );
-    await userClient.connect(userTransport);
+    })
+    await userClient.connect(userTransport)
 
-    const userTools = await userClient.listTools();
-    expect(userTools.tools.map((t) => t.name)).toEqual(["public-tool"]);
+    const userTools = await userClient.listTools()
+    expect(userTools.tools.map((t) => t.name)).toEqual(["public-tool"])
 
-    await adminClient.close();
-    await userClient.close();
+    await adminClient.close()
+    await userClient.close()
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("tools without canAccess are accessible to all", async () => {
   await runWithTestServer({
     run: async ({ client }) => {
-      const tools = await client.listTools();
-      expect(tools.tools).toHaveLength(1);
-      expect(tools.tools[0].name).toBe("test-tool");
+      const tools = await client.listTools()
+      expect(tools.tools).toHaveLength(1)
+      expect(tools.tools[0].name).toBe("test-tool")
 
       const result = await client.callTool({
         arguments: {},
         name: "test-tool",
-      });
-      expect(
-        (result.content as Array<{ text: string; type: string }>)[0],
-      ).toEqual({ text: "success", type: "text" });
+      })
+      expect((result.content as Array<{ text: string; type: string }>)[0]).toEqual({ text: "success", type: "text" })
     },
     server: async () => {
-      const server = new FastMCP({ name: "Test", version: "1.0.0" });
+      const server = new FastMCP({ name: "Test", version: "1.0.0" })
       server.addTool({
         description: "Test tool",
         execute: async () => "success",
         name: "test-tool",
-      });
-      return server;
+      })
+      return server
     },
-  });
-});
+  })
+})
 
 test("canAccess works without authentication", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP<{ role: string }>({
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     canAccess: (auth) => auth?.role === "admin",
     execute: async () => "admin",
     name: "admin-tool",
-  });
+  })
 
   server.addTool({
     execute: async () => "public",
     name: "public-tool",
-  });
+  })
 
-  await server.start({ httpStream: { port }, transportType: "httpStream" });
+  await server.start({ httpStream: { port }, transportType: "httpStream" })
 
   try {
-    const client = new Client(
-      { name: "test-client", version: "1.0.0" },
-      { capabilities: {} },
-    );
-    const transport = new SSEClientTransport(
-      new URL(`http://localhost:${port}/sse`),
-    );
-    await client.connect(transport);
+    const client = new Client({ name: "test-client", version: "1.0.0" }, { capabilities: {} })
+    const transport = new SSEClientTransport(new URL(`http://localhost:${port}/sse`))
+    await client.connect(transport)
 
-    const tools = await client.listTools();
-    expect(tools.tools.map((t) => t.name).sort()).toEqual([
-      "admin-tool",
-      "public-tool",
-    ]);
+    const tools = await client.listTools()
+    expect(tools.tools.map((t) => t.name).sort()).toEqual(["admin-tool", "public-tool"])
 
-    await client.close();
+    await client.close()
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 // We now use a direct approach for testing HTTP Stream functionality
 // rather than a helper function
 
 // Set longer timeout for HTTP Stream tests
 test("HTTP Stream: calls a tool", { timeout: 20000 }, async () => {
-  console.log("Starting HTTP Stream test...");
+  console.log("Starting HTTP Stream test...")
 
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   // Create server directly (don't use helper function)
   const server = new FastMCP({
     name: "Test",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Add two numbers",
     execute: async (args) => {
-      return String(args.a + args.b);
+      return String(args.a + args.b)
     },
     name: "add",
     parameters: z.object({
       a: z.number(),
       b: z.number(),
     }),
-  });
+  })
 
   await server.start({
     httpStream: {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     // Create client
@@ -3506,24 +3409,22 @@ test("HTTP Stream: calls a tool", { timeout: 20000 }, async () => {
       {
         capabilities: {},
       },
-    );
+    )
 
     // IMPORTANT: Don't provide sessionId manually with HTTP streaming
     // The server will generate a session ID automatically
-    const transport = new StreamableHTTPClientTransport(
-      new URL(`http://localhost:${port}/mcp`),
-    );
+    const transport = new StreamableHTTPClientTransport(new URL(`http://localhost:${port}/mcp`))
 
     // Connect client to server and wait for session to be ready
     const sessionPromise = new Promise<FastMCPSession>((resolve) => {
       server.on("connect", async (event) => {
-        await event.session.waitForReady();
-        resolve(event.session);
-      });
-    });
+        await event.session.waitForReady()
+        resolve(event.session)
+      })
+    })
 
-    await client.connect(transport);
-    await sessionPromise;
+    await client.connect(transport)
+    await sessionPromise
 
     // Call tool
     const result = await client.callTool({
@@ -3532,21 +3433,21 @@ test("HTTP Stream: calls a tool", { timeout: 20000 }, async () => {
         b: 2,
       },
       name: "add",
-    });
+    })
 
     // Check result
     expect(result).toEqual({
       content: [{ text: "3", type: "text" }],
-    });
+    })
 
     // Clean up connection
-    await transport.terminateSession();
+    await transport.terminateSession()
 
-    await client.close();
+    await client.close()
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("uses `formatInvalidParamsErrorMessage` callback to build ErrorCode.InvalidParams error message", async () => {
   await runWithTestServer({
@@ -3558,17 +3459,17 @@ test("uses `formatInvalidParamsErrorMessage` callback to build ErrorCode.Invalid
             b: "invalid",
           },
           name: "add",
-        });
+        })
       } catch (error) {
-        expect(error).toBeInstanceOf(McpError);
+        expect(error).toBeInstanceOf(McpError)
 
         // @ts-expect-error - we know that error is an McpError
-        expect(error.code).toBe(ErrorCode.InvalidParams);
+        expect(error.code).toBe(ErrorCode.InvalidParams)
 
         // @ts-expect-error - we know that error is an McpError
         expect(error.message).toBe(
           `MCP error -32602: MCP error -32602: Tool 'add' parameter validation failed: My custom error message: Field b failed with error 'Expected number, received string'. Please check the parameter types and values according to the tool's schema.`,
-        );
+        )
       }
     },
     server: async () => {
@@ -3578,52 +3479,52 @@ test("uses `formatInvalidParamsErrorMessage` callback to build ErrorCode.Invalid
           formatInvalidParamsErrorMessage: (issues) => {
             const message = issues
               .map((issue) => {
-                const path = issue.path?.join(".") || "root";
-                return `Field ${path} failed with error '${issue.message}'`;
+                const path = issue.path?.join(".") || "root"
+                return `Field ${path} failed with error '${issue.message}'`
               })
-              .join(", ");
-            return `My custom error message: ${message}`;
+              .join(", ")
+            return `My custom error message: ${message}`
           },
         },
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Add two numbers",
         execute: async (args) => {
-          return String(args.a + args.b);
+          return String(args.a + args.b)
         },
         name: "add",
         parameters: z.object({
           a: z.number(),
           b: z.number(),
         }),
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
 
 test("stateless mode works correctly", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP({
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Add two numbers",
     execute: async (args) => {
-      return String(args.a + args.b);
+      return String(args.a + args.b)
     },
     name: "add",
     parameters: z.object({
       a: z.number(),
       b: z.number(),
     }),
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -3631,7 +3532,7 @@ test("stateless mode works correctly", async () => {
       stateless: true,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     const client = new Client(
@@ -3642,56 +3543,54 @@ test("stateless mode works correctly", async () => {
       {
         capabilities: {},
       },
-    );
+    )
 
-    const transport = new StreamableHTTPClientTransport(
-      new URL(`http://localhost:${port}/mcp`),
-    );
+    const transport = new StreamableHTTPClientTransport(new URL(`http://localhost:${port}/mcp`))
 
-    await client.connect(transport);
+    await client.connect(transport)
 
     // Tool call should work in stateless mode
     const result = await client.callTool({
       arguments: { a: 5, b: 7 },
       name: "add",
-    });
+    })
 
     expect(result.content).toEqual([
       {
         text: "12",
         type: "text",
       },
-    ]);
+    ])
 
     // Multiple calls should work independently in stateless mode
     const result2 = await client.callTool({
       arguments: { a: 10, b: 20 },
       name: "add",
-    });
+    })
 
     expect(result2.content).toEqual([
       {
         text: "30",
         type: "text",
       },
-    ]);
+    ])
 
     // Server should not track sessions in stateless mode
-    expect(server.sessions.length).toBe(0);
+    expect(server.sessions.length).toBe(0)
 
-    await client.close();
+    await client.close()
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("stateless mode health check includes mode indicator", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP({
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -3699,44 +3598,44 @@ test("stateless mode health check includes mode indicator", async () => {
       stateless: true,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
-    const response = await fetch(`http://localhost:${port}/ready`);
-    expect(response.status).toBe(200);
+    const response = await fetch(`http://localhost:${port}/ready`)
+    expect(response.status).toBe(200)
 
-    const json = await response.json();
+    const json = await response.json()
     expect(json).toEqual({
       mode: "stateless",
       ready: 1,
       status: "ready",
       total: 1,
-    });
+    })
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("stateless mode with valid authentication allows access", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP<{ userId: string }>({
     authenticate: async () => {
       // Always authenticate successfully for this test
-      return { userId: "123" };
+      return { userId: "123" }
     },
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Test tool",
     execute: async () => {
-      return "pong";
+      return "pong"
     },
     name: "ping",
     parameters: z.object({}),
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -3744,7 +3643,7 @@ test("stateless mode with valid authentication allows access", async () => {
       stateless: true,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     const client = new Client(
@@ -3755,63 +3654,61 @@ test("stateless mode with valid authentication allows access", async () => {
       {
         capabilities: {},
       },
-    );
+    )
 
-    const transport = new StreamableHTTPClientTransport(
-      new URL(`http://localhost:${port}/mcp`),
-    );
+    const transport = new StreamableHTTPClientTransport(new URL(`http://localhost:${port}/mcp`))
 
-    await client.connect(transport);
+    await client.connect(transport)
 
     const result = await client.callTool({
       arguments: {},
       name: "ping",
-    });
+    })
 
     expect(result.content).toEqual([
       {
         text: "pong",
         type: "text",
       },
-    ]);
+    ])
 
     // Server should not track sessions in stateless mode
-    expect(server.sessions.length).toBe(0);
+    expect(server.sessions.length).toBe(0)
 
-    await client.close();
+    await client.close()
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("stateless mode rejects missing Authorization header", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP<{ userId: string }>({
     authenticate: async (req) => {
-      const authHeader = req.headers.authorization;
+      const authHeader = req.headers.authorization
 
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
         throw new Response(null, {
           status: 401,
           statusText: "Unauthorized",
-        });
+        })
       }
 
-      return { userId: "123" };
+      return { userId: "123" }
     },
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Test tool",
     execute: async () => {
-      return "pong";
+      return "pong"
     },
     name: "ping",
     parameters: z.object({}),
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -3819,7 +3716,7 @@ test("stateless mode rejects missing Authorization header", async () => {
       stateless: true,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     // Send a raw HTTP request without Authorization header
@@ -3837,56 +3734,56 @@ test("stateless mode rejects missing Authorization header", async () => {
         "Content-Type": "application/json",
       },
       method: "POST",
-    });
+    })
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(401)
 
-    const body = (await response.json()) as { error?: { message?: string } };
-    expect(body.error?.message).toContain("Unauthorized");
+    const body = (await response.json()) as { error?: { message?: string } }
+    expect(body.error?.message).toContain("Unauthorized")
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("stateless mode rejects invalid authentication token", async () => {
-  const port = await getRandomPort();
-  const VALID_TOKEN = "valid_jwt_token";
-  const INVALID_TOKEN = "invalid_jwt_token";
+  const port = await getRandomPort()
+  const VALID_TOKEN = "valid_jwt_token"
+  const INVALID_TOKEN = "invalid_jwt_token"
 
   const server = new FastMCP<{ userId: string }>({
     authenticate: async (req) => {
-      const authHeader = req.headers.authorization;
+      const authHeader = req.headers.authorization
 
       if (!authHeader || !authHeader.startsWith("Bearer ")) {
         throw new Response(null, {
           status: 401,
           statusText: "Unauthorized",
-        });
+        })
       }
 
-      const token = authHeader.split(" ")[1];
+      const token = authHeader.split(" ")[1]
 
       if (token === VALID_TOKEN) {
-        return { userId: "123" };
+        return { userId: "123" }
       }
 
       throw new Response(null, {
         status: 401,
         statusText: "Unauthorized",
-      });
+      })
     },
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Test tool",
     execute: async () => {
-      return "pong";
+      return "pong"
     },
     name: "ping",
     parameters: z.object({}),
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -3894,7 +3791,7 @@ test("stateless mode rejects invalid authentication token", async () => {
       stateless: true,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     // Send a raw HTTP request with invalid token
@@ -3913,37 +3810,37 @@ test("stateless mode rejects invalid authentication token", async () => {
         "Content-Type": "application/json",
       },
       method: "POST",
-    });
+    })
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(401)
 
-    const body = (await response.json()) as { error?: { message?: string } };
-    expect(body.error?.message).toContain("Unauthorized");
+    const body = (await response.json()) as { error?: { message?: string } }
+    expect(body.error?.message).toContain("Unauthorized")
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("stateless mode handles authentication function throwing errors", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP<{ userId: string }>({
     authenticate: async () => {
       // Simulate an internal error during token validation
-      throw new Error("JWT validation service is down");
+      throw new Error("JWT validation service is down")
     },
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Test tool",
     execute: async () => {
-      return "pong";
+      return "pong"
     },
     name: "ping",
     parameters: z.object({}),
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -3951,7 +3848,7 @@ test("stateless mode handles authentication function throwing errors", async () 
       stateless: true,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     // Send a raw HTTP request
@@ -3970,40 +3867,40 @@ test("stateless mode handles authentication function throwing errors", async () 
         "Content-Type": "application/json",
       },
       method: "POST",
-    });
+    })
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(401)
 
-    const body = (await response.json()) as { error?: { message?: string } };
+    const body = (await response.json()) as { error?: { message?: string } }
     // The actual error message should be passed through
-    expect(body.error?.message).toContain("JWT validation service is down");
+    expect(body.error?.message).toContain("JWT validation service is down")
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("stateless mode handles concurrent requests with authentication", async () => {
-  const port = await getRandomPort();
-  let requestCount = 0;
+  const port = await getRandomPort()
+  let requestCount = 0
 
   const server = new FastMCP<{ requestId: number }>({
     authenticate: async () => {
       // Track each authentication request
-      requestCount++;
-      return { requestId: requestCount };
+      requestCount++
+      return { requestId: requestCount }
     },
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Echo request ID",
     execute: async (_args, context) => {
-      return `Request ${context.session?.requestId}`;
+      return `Request ${context.session?.requestId}`
     },
     name: "whoami",
     parameters: z.object({}),
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -4011,7 +3908,7 @@ test("stateless mode handles concurrent requests with authentication", async () 
       stateless: true,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     // Create two clients to test concurrent stateless requests
@@ -4023,7 +3920,7 @@ test("stateless mode handles concurrent requests with authentication", async () 
       {
         capabilities: {},
       },
-    );
+    )
 
     const client2 = new Client(
       {
@@ -4033,67 +3930,63 @@ test("stateless mode handles concurrent requests with authentication", async () 
       {
         capabilities: {},
       },
-    );
+    )
 
-    const transport1 = new StreamableHTTPClientTransport(
-      new URL(`http://localhost:${port}/mcp`),
-    );
+    const transport1 = new StreamableHTTPClientTransport(new URL(`http://localhost:${port}/mcp`))
 
-    const transport2 = new StreamableHTTPClientTransport(
-      new URL(`http://localhost:${port}/mcp`),
-    );
+    const transport2 = new StreamableHTTPClientTransport(new URL(`http://localhost:${port}/mcp`))
 
-    await client1.connect(transport1);
-    await client2.connect(transport2);
+    await client1.connect(transport1)
+    await client2.connect(transport2)
 
     // Both clients should work independently
     const result1 = await client1.callTool({
       arguments: {},
       name: "whoami",
-    });
+    })
 
     const result2 = await client2.callTool({
       arguments: {},
       name: "whoami",
-    });
+    })
 
     // Each request should have been authenticated
-    expect((result1.content as unknown[])[0]).toHaveProperty("text");
-    expect((result2.content as unknown[])[0]).toHaveProperty("text");
+    expect((result1.content as unknown[])[0]).toHaveProperty("text")
+    expect((result2.content as unknown[])[0]).toHaveProperty("text")
 
     // Server should not track sessions in stateless mode
-    expect(server.sessions.length).toBe(0);
+    expect(server.sessions.length).toBe(0)
 
-    await client1.close();
-    await client2.close();
+    await client1.close()
+    await client2.close()
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 // Tests for GitHub Issue: FastMCP authentication fix
 // Testing the fix for session creation despite authentication failure
 
 test("authentication failure handling: should throw error when auth.authenticated is false", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP<{ authenticated: boolean; error?: string }>({
     authenticate: async () => {
       // Simulate authentication failure with { authenticated: false }
-      return { authenticated: false, error: "Invalid JWT token" };
+      return { authenticated: false, error: "Invalid JWT token" }
     },
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Test tool",
     execute: async () => {
-      return "pong";
+      return "pong"
     },
     name: "ping",
     parameters: z.object({}),
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -4101,7 +3994,7 @@ test("authentication failure handling: should throw error when auth.authenticate
       stateless: true,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     // Send a raw HTTP request that should be rejected
@@ -4122,43 +4015,43 @@ test("authentication failure handling: should throw error when auth.authenticate
         "Content-Type": "application/json",
       },
       method: "POST",
-    });
+    })
 
     // Should return 401 Unauthorized (handled by mcp-proxy)
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(401)
 
     const body = (await response.json()) as {
-      error?: { code?: number; message?: string };
-    };
-    expect(body.error?.message).toContain("Invalid JWT token");
+      error?: { code?: number; message?: string }
+    }
+    expect(body.error?.message).toContain("Invalid JWT token")
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("authentication failure handling: should create session when auth.authenticated is true", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP<{
-    authenticated: boolean;
-    session?: { userId: string };
+    authenticated: boolean
+    session?: { userId: string }
   }>({
     authenticate: async () => {
       // Simulate successful authentication
-      return { authenticated: true, session: { userId: "123" } };
+      return { authenticated: true, session: { userId: "123" } }
     },
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Test tool",
     execute: async (_args, context) => {
-      return `User: ${context.session?.session?.userId}`;
+      return `User: ${context.session?.session?.userId}`
     },
     name: "whoami",
     parameters: z.object({}),
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -4166,7 +4059,7 @@ test("authentication failure handling: should create session when auth.authentic
       stateless: true,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     const client = new Client(
@@ -4177,49 +4070,47 @@ test("authentication failure handling: should create session when auth.authentic
       {
         capabilities: {},
       },
-    );
+    )
 
-    const transport = new StreamableHTTPClientTransport(
-      new URL(`http://localhost:${port}/mcp`),
-    );
+    const transport = new StreamableHTTPClientTransport(new URL(`http://localhost:${port}/mcp`))
 
-    await client.connect(transport);
+    await client.connect(transport)
 
     const result = await client.callTool({
       arguments: {},
       name: "whoami",
-    });
+    })
 
     expect(result.content).toEqual([
       {
         text: "User: 123",
         type: "text",
       },
-    ]);
+    ])
 
-    await client.close();
+    await client.close()
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("authentication failure handling: should create session when auth is null/undefined (anonymous)", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP({
     // No authenticate function - anonymous access
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Test tool",
     execute: async (_args, context) => {
-      return `Anonymous: ${context.session === undefined}`;
+      return `Anonymous: ${context.session === undefined}`
     },
     name: "ping",
     parameters: z.object({}),
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -4227,7 +4118,7 @@ test("authentication failure handling: should create session when auth is null/u
       stateless: true,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     const client = new Client(
@@ -4238,52 +4129,50 @@ test("authentication failure handling: should create session when auth is null/u
       {
         capabilities: {},
       },
-    );
+    )
 
-    const transport = new StreamableHTTPClientTransport(
-      new URL(`http://localhost:${port}/mcp`),
-    );
+    const transport = new StreamableHTTPClientTransport(new URL(`http://localhost:${port}/mcp`))
 
-    await client.connect(transport);
+    await client.connect(transport)
 
     const result = await client.callTool({
       arguments: {},
       name: "ping",
-    });
+    })
 
     expect(result.content).toEqual([
       {
         text: "Anonymous: true",
         type: "text",
       },
-    ]);
+    ])
 
-    await client.close();
+    await client.close()
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("authentication failure handling: should use default error message when auth.error is not provided", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP<{ authenticated: boolean }>({
     authenticate: async () => {
       // Return authenticated: false without custom error message
-      return { authenticated: false };
+      return { authenticated: false }
     },
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Test tool",
     execute: async () => {
-      return "pong";
+      return "pong"
     },
     name: "ping",
     parameters: z.object({}),
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -4291,7 +4180,7 @@ test("authentication failure handling: should use default error message when aut
       stateless: true,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     const response = await fetch(`http://localhost:${port}/mcp`, {
@@ -4310,39 +4199,39 @@ test("authentication failure handling: should use default error message when aut
         "Content-Type": "application/json",
       },
       method: "POST",
-    });
+    })
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(401)
 
     const body = (await response.json()) as {
-      error?: { message?: string };
-    };
-    expect(body.error?.message).toContain("Authentication failed");
+      error?: { message?: string }
+    }
+    expect(body.error?.message).toContain("Authentication failed")
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("authentication failure handling: should preserve existing behavior for truthy auth results", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP<{ role: string; userId: string }>({
     authenticate: async () => {
       // Return a truthy object without 'authenticated' field (legacy pattern)
-      return { role: "admin", userId: "456" };
+      return { role: "admin", userId: "456" }
     },
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Test tool",
     execute: async (_args, context) => {
-      return `User: ${context.session?.userId}, Role: ${context.session?.role}`;
+      return `User: ${context.session?.userId}, Role: ${context.session?.role}`
     },
     name: "whoami",
     parameters: z.object({}),
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -4350,7 +4239,7 @@ test("authentication failure handling: should preserve existing behavior for tru
       stateless: true,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     const client = new Client(
@@ -4361,52 +4250,50 @@ test("authentication failure handling: should preserve existing behavior for tru
       {
         capabilities: {},
       },
-    );
+    )
 
-    const transport = new StreamableHTTPClientTransport(
-      new URL(`http://localhost:${port}/mcp`),
-    );
+    const transport = new StreamableHTTPClientTransport(new URL(`http://localhost:${port}/mcp`))
 
-    await client.connect(transport);
+    await client.connect(transport)
 
     const result = await client.callTool({
       arguments: {},
       name: "whoami",
-    });
+    })
 
     expect(result.content).toEqual([
       {
         text: "User: 456, Role: admin",
         type: "text",
       },
-    ]);
+    ])
 
-    await client.close();
+    await client.close()
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("authentication failure handling: should handle authentication with custom error messages", async () => {
-  const port = await getRandomPort();
-  const CUSTOM_ERROR_MSG = "Token expired at 2025-10-07T12:00:00Z";
+  const port = await getRandomPort()
+  const CUSTOM_ERROR_MSG = "Token expired at 2025-10-07T12:00:00Z"
 
   const server = new FastMCP<{ authenticated: boolean; error?: string }>({
     authenticate: async () => {
-      return { authenticated: false, error: CUSTOM_ERROR_MSG };
+      return { authenticated: false, error: CUSTOM_ERROR_MSG }
     },
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Test tool",
     execute: async () => {
-      return "pong";
+      return "pong"
     },
     name: "ping",
     parameters: z.object({}),
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -4414,7 +4301,7 @@ test("authentication failure handling: should handle authentication with custom 
       stateless: true,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     const response = await fetch(`http://localhost:${port}/mcp`, {
@@ -4433,26 +4320,26 @@ test("authentication failure handling: should handle authentication with custom 
         "Content-Type": "application/json",
       },
       method: "POST",
-    });
+    })
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(401)
 
     const body = (await response.json()) as {
-      error?: { message?: string };
-    };
-    expect(body.error?.message).toBe(CUSTOM_ERROR_MSG);
+      error?: { message?: string }
+    }
+    expect(body.error?.message).toBe(CUSTOM_ERROR_MSG)
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("authentication failure handling: should not create session for authenticated=false even with session data", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP<{
-    authenticated: boolean;
-    error?: string;
-    session?: { userId: string };
+    authenticated: boolean
+    error?: string
+    session?: { userId: string }
   }>({
     authenticate: async () => {
       // Even if session data is present, authenticated: false should reject
@@ -4460,20 +4347,20 @@ test("authentication failure handling: should not create session for authenticat
         authenticated: false,
         error: "Insufficient permissions",
         session: { userId: "hacker" },
-      };
+      }
     },
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   server.addTool({
     description: "Test tool",
     execute: async () => {
-      return "pong";
+      return "pong"
     },
     name: "ping",
     parameters: z.object({}),
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -4481,7 +4368,7 @@ test("authentication failure handling: should not create session for authenticat
       stateless: true,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
     const response = await fetch(`http://localhost:${port}/mcp`, {
@@ -4500,29 +4387,29 @@ test("authentication failure handling: should not create session for authenticat
         "Content-Type": "application/json",
       },
       method: "POST",
-    });
+    })
 
-    expect(response.status).toBe(401);
+    expect(response.status).toBe(401)
 
     const body = (await response.json()) as {
-      error?: { message?: string };
-    };
-    expect(body.error?.message).toContain("Insufficient permissions");
+      error?: { message?: string }
+    }
+    expect(body.error?.message).toContain("Insufficient permissions")
 
     // Verify session was never created
-    expect(server.sessions.length).toBe(0);
+    expect(server.sessions.length).toBe(0)
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("host configuration works with 0.0.0.0", async () => {
-  const port = await getRandomPort();
+  const port = await getRandomPort()
 
   const server = new FastMCP({
     name: "Test server",
     version: "1.0.0",
-  });
+  })
 
   await server.start({
     httpStream: {
@@ -4530,50 +4417,50 @@ test("host configuration works with 0.0.0.0", async () => {
       port,
     },
     transportType: "httpStream",
-  });
+  })
 
   try {
-    const healthResponse = await fetch(`http://0.0.0.0:${port}/health`);
-    expect(healthResponse.status).toBe(200);
-    expect(await healthResponse.text()).toBe("✓ Ok");
+    const healthResponse = await fetch(`http://0.0.0.0:${port}/health`)
+    expect(healthResponse.status).toBe(200)
+    expect(await healthResponse.text()).toBe("✓ Ok")
   } finally {
-    await server.stop();
+    await server.stop()
   }
-});
+})
 
 test("tools can access client info", async () => {
   await runWithTestServer({
     run: async ({ client }) => {
       const result = (await client.callTool({
         name: "get-client-info",
-      })) as ContentResult;
+      })) as ContentResult
 
-      expect(result.content).toHaveLength(1);
-      expect(result.content[0]).toHaveProperty("type", "text");
+      expect(result.content).toHaveLength(1)
+      expect(result.content[0]).toHaveProperty("type", "text")
 
-      const text = (result.content[0] as TextContent).text;
-      expect(text).toContain("Client name:");
-      expect(text).toContain("Client version:");
+      const text = (result.content[0] as TextContent).text
+      expect(text).toContain("Client name:")
+      expect(text).toContain("Client version:")
       // The client info should contain some actual client information
-      expect(text).toMatch(/Client name:\s+\w+/);
-      expect(text).toMatch(/Client version:\s+[\d.]+/);
+      expect(text).toMatch(/Client name:\s+\w+/)
+      expect(text).toMatch(/Client version:\s+[\d.]+/)
     },
     server: async () => {
       const server = new FastMCP({
         name: "Test",
         version: "1.0.0",
-      });
+      })
 
       server.addTool({
         description: "Get client information",
         execute: async (_args, context) => {
-          const clientInfo = context.client.version;
-          return `Client name: ${clientInfo?.name || "unknown"}\nClient version: ${clientInfo?.version || "unknown"}`;
+          const clientInfo = context.client.version
+          return `Client name: ${clientInfo?.name || "unknown"}\nClient version: ${clientInfo?.version || "unknown"}`
         },
         name: "get-client-info",
-      });
+      })
 
-      return server;
+      return server
     },
-  });
-});
+  })
+})
