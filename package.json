@@ -1,6 +1,6 @@
 {
-  "name": "fastmcp",
-  "version": "1.0.0-edgeandnode.1",
+  "name": "@ampersend_ai/fastmcp",
+  "version": "1.0.0",
   "main": "dist/FastMCP.js",
   "scripts": {
     "build": "tsup",
@@ -22,7 +22,7 @@
   "module": "dist/FastMCP.js",
   "types": "dist/FastMCP.d.ts",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "github:edgeandnode/mcp-typescript-sdk#2de06543904483073d8cc13db1d0e08e16601081",
+    "@modelcontextprotocol/sdk": "npm:@ampersend_ai/modelcontextprotocol-sdk@^1.20.1",
     "@standard-schema/spec": "^1.0.0",
     "execa": "^9.6.0",
     "file-type": "^21.0.0",
@@ -37,7 +37,7 @@
     "zod-to-json-schema": "^3.24.6"
   },
   "repository": {
-    "url": "https://github.com/punkpeye/fastmcp"
+    "url": "https://github.com/edgeandnode/fastmcp"
   },
   "homepage": "https://glama.ai/mcp",
   "release": {

@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@modelcontextprotocol/sdk':
-        specifier: github:edgeandnode/mcp-typescript-sdk#2de06543904483073d8cc13db1d0e08e16601081
-        version: https://codeload.github.com/edgeandnode/mcp-typescript-sdk/tar.gz/2de06543904483073d8cc13db1d0e08e16601081
+        specifier: npm:@ampersend_ai/modelcontextprotocol-sdk@^1.20.1
+        version: '@ampersend_ai/modelcontextprotocol-sdk@1.20.1'
       '@standard-schema/spec':
         specifier: ^1.0.0
         version: 1.0.0
@@ -125,6 +125,10 @@ importers:
         version: 3.2.4(@types/node@24.2.1)(jiti@2.5.1)
 
 packages:
+
+  '@ampersend_ai/modelcontextprotocol-sdk@1.20.1':
+    resolution: {integrity: sha512-u28xfWkgMyYsFW9jyJWuU8BndOFGJVPGRXu6g7t1iuOOTDA76lBAB5a6cbWzL4Y852gHYNyit3qTSL4I3EHCuw==}
+    engines: {node: '>=18'}
 
   '@ark/schema@0.46.0':
     resolution: {integrity: sha512-c2UQdKgP2eqqDArfBqQIJppxJHvNNXuQPeuSPlDML4rjw+f1cu0qAlzOG4b8ujgm9ctIDWwhpyw6gjG5ledIVQ==}
@@ -421,11 +425,6 @@ packages:
 
   '@modelcontextprotocol/sdk@1.17.2':
     resolution: {integrity: sha512-EFLRNXR/ixpXQWu6/3Cu30ndDFIFNaqUXcTqsGebujeMan9FzhAaFFswLRiFj61rgygDRr8WO1N+UijjgRxX9g==}
-    engines: {node: '>=18'}
-
-  '@modelcontextprotocol/sdk@https://codeload.github.com/edgeandnode/mcp-typescript-sdk/tar.gz/2de06543904483073d8cc13db1d0e08e16601081':
-    resolution: {tarball: https://codeload.github.com/edgeandnode/mcp-typescript-sdk/tar.gz/2de06543904483073d8cc13db1d0e08e16601081}
-    version: 1.20.1-edgeandnode.1
     engines: {node: '>=18'}
 
   '@nodelib/fs.scandir@2.1.5':
@@ -3716,6 +3715,23 @@ packages:
 
 snapshots:
 
+  '@ampersend_ai/modelcontextprotocol-sdk@1.20.1':
+    dependencies:
+      ajv: 6.12.6
+      content-type: 1.0.5
+      cors: 2.8.5
+      cross-spawn: 7.0.6
+      eventsource: 3.0.7
+      eventsource-parser: 3.0.3
+      express: 5.1.0
+      express-rate-limit: 7.5.1(express@5.1.0)
+      pkce-challenge: 5.0.0
+      raw-body: 3.0.0
+      zod: 3.25.76
+      zod-to-json-schema: 3.24.6(zod@3.25.76)
+    transitivePeerDependencies:
+      - supports-color
+
   '@ark/schema@0.46.0':
     dependencies:
       '@ark/util': 0.46.0
@@ -3999,23 +4015,6 @@ snapshots:
       - utf-8-validate
 
   '@modelcontextprotocol/sdk@1.17.2':
-    dependencies:
-      ajv: 6.12.6
-      content-type: 1.0.5
-      cors: 2.8.5
-      cross-spawn: 7.0.6
-      eventsource: 3.0.7
-      eventsource-parser: 3.0.3
-      express: 5.1.0
-      express-rate-limit: 7.5.1(express@5.1.0)
-      pkce-challenge: 5.0.0
-      raw-body: 3.0.0
-      zod: 3.25.76
-      zod-to-json-schema: 3.24.6(zod@3.25.76)
-    transitivePeerDependencies:
-      - supports-color
-
-  '@modelcontextprotocol/sdk@https://codeload.github.com/edgeandnode/mcp-typescript-sdk/tar.gz/2de06543904483073d8cc13db1d0e08e16601081':
     dependencies:
       ajv: 6.12.6
       content-type: 1.0.5
