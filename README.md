@@ -771,7 +771,53 @@ The `log` object has the following methods:
 
 #### Errors
 
-The errors that are meant to be shown to the user should be thrown as `UserError` instances:
+FastMCP supports two ways to handle errors in tool execution:
+
+##### MCP Errors (Recommended)
+
+For standards-compliant error handling, throw `McpError` with appropriate error codes:
+
+```js
+import { ErrorCode, McpError } from "fastmcp";
+
+server.addTool({
+  name: "download",
+  description: "Download a file",
+  parameters: z.object({
+    url: z.string(),
+  }),
+  execute: async (args) => {
+    if (args.url.startsWith("https://example.com")) {
+      // Throw MCP error with InvalidParams code
+      throw new McpError(ErrorCode.InvalidParams, "This URL is not allowed");
+    }
+
+    // Throw MCP error with custom data
+    if (!urlExists(args.url)) {
+      throw new McpError(ErrorCode.InvalidRequest, "Resource not found", {
+        url: args.url,
+        statusCode: 404,
+      });
+    }
+
+    return "done";
+  },
+});
+```
+
+**Available Error Codes:**
+
+- `ErrorCode.InvalidParams` - Invalid parameters provided
+- `ErrorCode.InvalidRequest` - Invalid request
+- `ErrorCode.InternalError` - Internal server error
+- `ErrorCode.MethodNotFound` - Method/resource not found
+- And other standard JSON-RPC error codes
+
+When a tool throws `McpError`, it's propagated through the MCP protocol as a proper JSON-RPC error, allowing clients to handle different error types appropriately.
+
+##### User Errors (Legacy)
+
+For backward compatibility, you can still use `UserError` for simple error messages:
 
 ```js
 import { UserError } from "fastmcp";
@@ -791,6 +837,8 @@ server.addTool({
   },
 });
 ```
+
+`UserError` errors are converted to tool responses with `isError: true` and are displayed to the user as text content.
 
 #### Progress
 
@@ -1316,9 +1364,9 @@ In this example, only clients authenticating with the `admin` role will be able 
 FastMCP includes built-in support for OAuth discovery endpoints, supporting both **MCP Specification 2025-03-26** and **MCP Specification 2025-06-18** for OAuth integration. This makes it easy to integrate with OAuth authorization flows by providing standard discovery endpoints that comply with RFC 8414 (OAuth 2.0 Authorization Server Metadata) and RFC 9470 (OAuth 2.0 Protected Resource Metadata):
 
 ```ts
+import fastJwt from "fast-jwt";
 import { FastMCP } from "fastmcp";
 import { buildGetJwks } from "get-jwks";
-import fastJwt from "fast-jwt";
 
 const server = new FastMCP({
   name: "My Server",
@@ -1420,8 +1468,9 @@ For JWT token validation, you can use libraries like [`get-jwks`](https://github
 If you are exposing your MCP server via HTTP, you may wish to allow clients to supply sensitive keys via headers, which can then be passed along to APIs that your tools interact with, allowing each client to supply their own API keys. This can be done by capturing the HTTP headers in the `authenticate` section and storing them in the session to be referenced by the tools later.
 
 ```ts
-import { FastMCP } from "fastmcp";
 import { IncomingHttpHeaders } from "http";
+
+import { FastMCP } from "fastmcp";
 
 // Define the session data type
 interface SessionData {
@@ -1470,8 +1519,8 @@ server.start({
 A client that would connect to this may look something like this:
 
 ```ts
-import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
 const transport = new StreamableHTTPClientTransport(
   new URL(`http://localhost:8080/mcp`),

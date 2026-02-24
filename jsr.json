@@ -2,6 +2,6 @@
   "exports": "./src/FastMCP.ts",
   "include": ["src/FastMCP.ts", "src/bin/fastmcp.ts"],
   "license": "MIT",
-  "name": "@punkpeye/fastmcp",
+  "name": "@ampersend_ai/fastmcp",
   "version": "1.0.0"
 }

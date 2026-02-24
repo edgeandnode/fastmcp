@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-
 import { execa } from "execa";
 import yargs from "yargs";
 import { hideBin } from "yargs/helpers";

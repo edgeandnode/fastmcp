@@ -19,6 +19,7 @@ import {
   ListToolsRequestSchema,
   McpError,
   ReadResourceRequestSchema,
+  RequestMeta,
   ResourceLink,
   Root,
   RootsListChangedNotificationSchema,
@@ -80,9 +81,7 @@ export const imageContent = async (
         rawData = Buffer.from(await response.arrayBuffer());
       } catch (error) {
         throw new Error(
-          `Failed to fetch image from URL (${input.url}): ${
-            error instanceof Error ? error.message : String(error)
-          }`,
+          `Failed to fetch image from URL (${input.url}): ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     } else if ("path" in input) {
@@ -90,9 +89,7 @@ export const imageContent = async (
         rawData = await readFile(input.path);
       } catch (error) {
         throw new Error(
-          `Failed to read image from path (${input.path}): ${
-            error instanceof Error ? error.message : String(error)
-          }`,
+          `Failed to read image from path (${input.path}): ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     } else if ("buffer" in input) {
@@ -108,9 +105,7 @@ export const imageContent = async (
 
     if (!mimeType || !mimeType.mime.startsWith("image/")) {
       console.warn(
-        `Warning: Content may not be a valid image. Detected MIME: ${
-          mimeType?.mime || "unknown"
-        }`,
+        `Warning: Content may not be a valid image. Detected MIME: ${mimeType?.mime || "unknown"}`,
       );
     }
 
@@ -149,9 +144,7 @@ export const audioContent = async (
         rawData = Buffer.from(await response.arrayBuffer());
       } catch (error) {
         throw new Error(
-          `Failed to fetch audio from URL (${input.url}): ${
-            error instanceof Error ? error.message : String(error)
-          }`,
+          `Failed to fetch audio from URL (${input.url}): ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     } else if ("path" in input) {
@@ -159,9 +152,7 @@ export const audioContent = async (
         rawData = await readFile(input.path);
       } catch (error) {
         throw new Error(
-          `Failed to read audio from path (${input.path}): ${
-            error instanceof Error ? error.message : String(error)
-          }`,
+          `Failed to read audio from path (${input.path}): ${error instanceof Error ? error.message : String(error)}`,
         );
       }
     } else if ("buffer" in input) {
@@ -177,9 +168,7 @@ export const audioContent = async (
 
     if (!mimeType || !mimeType.mime.startsWith("audio/")) {
       console.warn(
-        `Warning: Content may not be a valid audio file. Detected MIME: ${
-          mimeType?.mime || "unknown"
-        }`,
+        `Warning: Content may not be a valid audio file. Detected MIME: ${mimeType?.mime || "unknown"}`,
       );
     }
 
@@ -215,6 +204,7 @@ type Context<T extends FastMCPSessionAuth> = {
    * Available for all transports when the client provides it.
    */
   requestId?: string;
+  requestMetadata?: RequestMeta;
   session: T | undefined;
   /**
    * Session ID from the Mcp-Session-Id header.
@@ -262,6 +252,26 @@ abstract class FastMCPError extends Error {
   }
 }
 
+/**
+ * Custom MCP error with a marker property to enable robust error detection
+ * across module boundaries.
+ *
+ * This class extends McpError and adds a `__isMcpError` marker property.
+ * This allows error detection to work even when instanceof fails due to
+ * module instances being loaded multiple times (e.g., with tsx, different
+ * bundlers, or ESM/CommonJS mixing).
+ *
+ * Use this instead of McpError when you need the error to be re-thrown
+ * by FastMCP's error handling rather than wrapped in a result.
+ */
+export class CustomMcpError extends McpError {
+  readonly __isMcpError = true;
+
+  constructor(code: number, message: string, data?: unknown) {
+    super(code, message, data);
+  }
+}
+
 export class UnexpectedStateError extends FastMCPError {
   public extras?: Extras;
 
@@ -276,6 +286,23 @@ export class UnexpectedStateError extends FastMCPError {
  * An error that is meant to be surfaced to the user.
  */
 export class UserError extends UnexpectedStateError {}
+
+/**
+ * Type guard to check if an error should be re-thrown as an MCP error.
+ * Works across module boundaries by checking both instanceof and marker property.
+ *
+ * @param error - The error to check
+ * @returns true if error is an McpError or has the __isMcpError marker
+ */
+export function isMcpErrorLike(error: unknown): error is McpError {
+  return (
+    error instanceof McpError ||
+    (typeof error === "object" &&
+      error !== null &&
+      "__isMcpError" in error &&
+      (error as { __isMcpError?: boolean }).__isMcpError === true)
+  );
+}
 
 const TextContentZodSchema = z
   .object({
@@ -371,12 +398,14 @@ const ContentZodSchema = z.discriminatedUnion("type", [
 ]) satisfies z.ZodType<Content>;
 
 type ContentResult = {
+  _meta?: Record<string, unknown>;
   content: Content[];
   isError?: boolean;
 };
 
 const ContentResultZodSchema = z
   .object({
+    _meta: z.record(z.unknown()).optional(),
     content: ContentZodSchema.array(),
     isError: z.boolean().optional(),
   })
@@ -1150,9 +1179,7 @@ export class FastMCPSession<
             );
           } else {
             this.#logger.error(
-              `[FastMCP error] received error listing roots.\n\n${
-                e instanceof Error ? e.stack : JSON.stringify(e)
-              }`,
+              `[FastMCP error] received error listing roots.\n\n${e instanceof Error ? e.stack : JSON.stringify(e)}`,
             );
           }
         }
@@ -1819,7 +1846,6 @@ export class FastMCPSession<
             );
           }
         };
-
         const executeToolPromise = tool.execute(args, {
           client: {
             version: this.#server.getClientVersion(),
@@ -1830,6 +1856,7 @@ export class FastMCPSession<
             typeof request.params?._meta?.requestId === "string"
               ? request.params._meta.requestId
               : undefined,
+          requestMetadata: request.params._meta,
           session: this.#auth,
           sessionId: this.#sessionId,
           streamContent,
@@ -1842,7 +1869,8 @@ export class FastMCPSession<
               new Promise<never>((_, reject) => {
                 const timeoutId = setTimeout(() => {
                   reject(
-                    new UserError(
+                    new McpError(
+                      ErrorCode.InternalError,
                       `Tool '${request.params.name}' timed out after ${tool.timeoutMs}ms. Consider increasing timeoutMs or optimizing the tool implementation.`,
                     ),
                   );
@@ -1883,6 +1911,12 @@ export class FastMCPSession<
           result = ContentResultZodSchema.parse(maybeStringResult);
         }
       } catch (error) {
+        // Re-throw McpError to let the MCP SDK handle it as a proper JSON-RPC error
+        // Use type guard to handle instanceof failures across module boundaries
+        if (isMcpErrorLike(error)) {
+          throw error;
+        }
+
         if (error instanceof UserError) {
           return {
             content: [{ text: error.message, type: "text" }],
@@ -2520,6 +2554,8 @@ export class FastMCP<
   }
 }
 
+export { ErrorCode, McpError } from "@modelcontextprotocol/sdk/types.js";
+
 export type {
   AudioContent,
   Content,
@@ -2534,6 +2570,7 @@ export type {
   Progress,
   Prompt,
   PromptArgument,
+  RequestMeta,
   Resource,
   ResourceContent,
   ResourceLink,
