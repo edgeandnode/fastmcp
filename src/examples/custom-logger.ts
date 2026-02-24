@@ -9,30 +9,30 @@
  *
  */
 
-import { z } from "zod"
+import { z } from "zod";
 
-import { FastMCP, Logger } from "../FastMCP.js"
+import { FastMCP, Logger } from "../FastMCP.js";
 
 // Example 1: Simple Custom Logger Implementation
 class SimpleCustomLogger implements Logger {
   debug(...args: unknown[]): void {
-    console.log("[CUSTOM DEBUG]", new Date().toISOString(), ...args)
+    console.log("[CUSTOM DEBUG]", new Date().toISOString(), ...args);
   }
 
   error(...args: unknown[]): void {
-    console.error("[CUSTOM ERROR]", new Date().toISOString(), ...args)
+    console.error("[CUSTOM ERROR]", new Date().toISOString(), ...args);
   }
 
   info(...args: unknown[]): void {
-    console.info("[CUSTOM INFO]", new Date().toISOString(), ...args)
+    console.info("[CUSTOM INFO]", new Date().toISOString(), ...args);
   }
 
   log(...args: unknown[]): void {
-    console.log("[CUSTOM LOG]", new Date().toISOString(), ...args)
+    console.log("[CUSTOM LOG]", new Date().toISOString(), ...args);
   }
 
   warn(...args: unknown[]): void {
-    console.warn("[CUSTOM WARN]", new Date().toISOString(), ...args)
+    console.warn("[CUSTOM WARN]", new Date().toISOString(), ...args);
   }
 }
 
@@ -172,7 +172,7 @@ class SimpleCustomLogger implements Logger {
 // }
 
 // Choose which logger to use (uncomment the one you want to use)
-const logger = new SimpleCustomLogger()
+const logger = new SimpleCustomLogger();
 // const logger = new FileLogger();
 // const logger = new WinstonLoggerAdapter();
 // const logger = new PinoLoggerAdapter();
@@ -181,21 +181,21 @@ const server = new FastMCP({
   logger: logger,
   name: "custom-logger-example",
   version: "1.0.0",
-})
+});
 
 server.addTool({
   description: "A test tool that demonstrates custom logging",
   execute: async (args) => {
-    return `Received: ${args.message}`
+    return `Received: ${args.message}`;
   },
   name: "test_tool",
   parameters: z.object({
     message: z.string().describe("A message to log"),
   }),
-})
+});
 
 // Start the server with stdio transport
 server.start({ transportType: "stdio" }).catch((error: unknown) => {
-  console.error("Failed to start server:", error)
-  process.exit(1)
-})
+  console.error("Failed to start server:", error);
+  process.exit(1);
+});
